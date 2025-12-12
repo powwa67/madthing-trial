@@ -905,14 +905,18 @@
             gameState = 'START';
             score = 0; frames = 0;
             currentBiome = 0; 
-            hasShieldSpawned = false;
             
+            // LOGIC: Infinite Mode vs Normal Mode
             if (isUnlocked) {
                 infiniteMode = true;
                 progressContainer.style.display = 'none';
-                scoreCounter.style.display = 'block';
+                
+                // FIX: Hide the "0" while on the Menu
+                scoreCounter.style.display = 'none'; 
                 scoreCounter.innerText = "0";
             } else {
+                // THIS IS THE PART YOU ASKED ABOUT
+                // It ensures Level 1 players see the bar, not the numbers
                 infiniteMode = false;
                 progressContainer.style.display = 'flex';
                 scoreCounter.style.display = 'none';
@@ -924,6 +928,7 @@
             
             player.y = height/2; player.velocity = 0; player.rotation = 0;
             player.hasShield = false; 
+            hasShieldSpawned = false; // Reset shield spawn flag
             
             obstacles.list = []; trail = []; shockwaves = []; floatTexts = []; items = [];
             
@@ -936,6 +941,10 @@
         function startGame() {
             if(gameState === 'PLAY') return;
             if(audioCtx.state === 'suspended') audioCtx.resume(); 
+            
+            // Show score if in infinite mode
+            if(infiniteMode) scoreCounter.style.display = 'block';
+            
             gameState = 'PLAY';
             MUSIC.play();
             document.getElementById('main-menu').style.display = 'none';
@@ -1144,27 +1153,35 @@
                 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
+                    // Sanitizing name to prevent HTML injection
                     const safeName = data.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     
-                    // Color Logic for Top 3
-                    let rankClass = "rank-norm";
-                    let rowStyle = "border-bottom: 1px dashed #222; padding: 6px 0;";
+                    // Color Logic
+                    let rankStyle = "color: #aaa;"; // Default Gray
+                    let rowStyle = "border-bottom: 1px dashed #333; padding: 6px 0;";
                     
-                    if(rank === 1) { rankClass = "rank-1"; rowStyle = "border-bottom: 1px solid #ffff00; padding: 8px 0; background: rgba(255,255,0,0.05);"; }
-                    else if(rank === 2) rankClass = "rank-2";
-                    else if(rank === 3) rankClass = "rank-3";
+                    if(rank === 1) { 
+                        rankStyle = "color: #ffff00; text-shadow: 0 0 10px #ffff00; font-weight:bold;"; // GOLD
+                        rowStyle = "border-bottom: 1px solid #ffff00; padding: 8px 0; background: rgba(255, 255, 0, 0.1);"; 
+                    }
+                    else if(rank === 2) { 
+                        rankStyle = "color: #00ffff; text-shadow: 0 0 10px #00ffff; font-weight:bold;"; // CYAN
+                    }
+                    else if(rank === 3) { 
+                        rankStyle = "color: #bd00ff; text-shadow: 0 0 10px #bd00ff; font-weight:bold;"; // PURPLE
+                    }
                     
                     html += `
-                    <div style="display:flex; justify-content:space-between; ${rowStyle}">
-                        <span class="${rankClass}">
-                            <span style="display:inline-block; width:20px;">#${rank}</span> ${safeName}
+                    <div style="display:flex; justify-content:space-between; align-items:center; ${rowStyle}">
+                        <span style="${rankStyle} font-family: monospace; font-size: 0.9rem;">
+                            <span style="display:inline-block; width:25px;">#${rank}</span> ${safeName}
                         </span>
-                        <span style="color:#fff; font-weight:bold;">${data.score}</span>
+                        <span style="${rankStyle} font-size: 1rem;">${data.score}</span>
                     </div>`;
                     rank++;
                 });
                 
-                if(html === "") html = "<div style='text-align:center; color:#666; margin-top:20px;'>NO_DATA_FOUND</div>";
+                if(html === "") html = "<div style='text-align:center; color:#555; margin-top:30px; font-family:monospace;'>[NO_DATA]</div>";
                 listDiv.innerHTML = html;
             }, (error) => {
                 console.error("Error getting real-time updates: ", error);
@@ -1174,6 +1191,7 @@
     </script>
 </body>
 </html>
+
 
 
 
