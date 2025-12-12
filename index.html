@@ -181,6 +181,8 @@
             z-index: 40; mix-blend-mode: overlay;
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -205,7 +207,15 @@
             <div id="main-menu">
                 <h1 id="title" class="glitch-anim">POWA<br>PROXY</h1>
                 <div id="menu-high-score" class="high-score-label">BEST: 0</div>
-                <div style="color:#ffff00; margin-top:15px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
+                
+                <div id="leaderboard" style="margin: 15px auto; width: 300px; background: rgba(0,0,0,0.85); border: 2px solid #555; border-radius: 8px; padding: 10px; height: 160px; overflow-y: auto; text-align: left; box-sizing: border-box;">
+                    <h3 style="color: #bd00ff; margin: 0 0 10px 0; font-size: 1rem; text-align: center; text-shadow: 0 0 5px #bd00ff;">GLOBAL TOP 10</h3>
+                    <div id="leaderboard-list" style="font-family: monospace; color: #fff; font-size: 0.9rem;">
+                        Loading...
+                    </div>
+                </div>
+
+                <div style="color:#ffff00; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
             </div>
         </div>
@@ -215,11 +225,21 @@
             <div id="death-score-display" style="color:#fff; font-size:1.5rem; margin: 10px 0;">SCORE: 0</div>
             <div id="death-best-display" style="color:#bd00ff; font-size:1.2rem; text-shadow:0 0 10px #bd00ff;">BEST: 0</div>
             
-            <p style="color:#aaa; font-size:0.9rem; margin-top:10px; max-width: 80%;">just go back to jllm atp fam</p>
+            <input type="text" id="username-input" placeholder="ENTER NAME" maxlength="10" 
+                   style="background: #111; border: 2px solid #fff; color: #fff; padding: 10px; 
+                          font-family: 'Russo One', sans-serif; font-size: 1.2rem; text-align: center; 
+                          text-transform: uppercase; margin: 15px 0; width: 80%; border-radius: 8px; outline: none;">
+            
+            <button id="submit-score-btn" class="btn" onclick="submitScore()" 
+                    style="background: linear-gradient(180deg, #00aaff, #0055aa); border-color: #fff; margin-bottom: 15px;">
+                SUBMIT SCORE
+            </button>
+
+            <p style="color:#aaa; font-size:0.9rem; margin-top:5px; max-width: 80%;">just go back to jllm atp fam</p>
             <div style="width: 200px; height: 4px; background: #333; margin: 20px 0;"></div>
             <button class="btn" style="background: linear-gradient(180deg, #555, #222); border-color:#888;" onclick="resetLevel()">TRY AGAIN</button>
         </div>
-
+        
         <div id="win-modal" class="modal">
             <h1 style="color:#00ffff; font-size:3rem; text-shadow: 0 0 20px #00ffff;">ACCESS GRANTED</h1>
             <div class="key-container">
@@ -1024,8 +1044,100 @@
         window.addEventListener('touchstart', handleInput, {passive: false});
 
         initGalaxy(); initParticles(); resetLevel(); requestAnimationFrame(loop);
+
+        // --------------------------------------------------------
+        // FIREBASE DATABASE LOGIC (COMPAT VERSION)
+        // --------------------------------------------------------
+
+        // !!! PASTE YOUR FIREBASE CONFIG HERE !!!
+        const firebaseConfig = {
+            apiKey: "AIzaSyCTnLXpYRMw8pxaBS1cIqeeGqtD7A1Mtow",
+            authDomain: "powa-2f1bc.firebaseapp.com",
+            projectId: "powa-2f1bc",
+            storageBucket: "powa-2f1bc.firebasestorage.app",
+            messagingSenderId: "522344119710",
+            appId: "1:522344119710:web:3bd572ef6580abd4c76a8f"
+            measurementId: "G-R9Q8FQFJQX"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // 1. Submit Score Function
+        window.submitScore = function() {
+            const nameInput = document.getElementById('username-input');
+            const submitBtn = document.getElementById('submit-score-btn');
+            
+            // Clean up name (remove spaces, uppercase)
+            // If empty, default to "ANONYMOUS"
+            const name = nameInput.value.toUpperCase().trim() || "ANONYMOUS";
+            
+            if(score === 0) { 
+                alert("You need a score higher than 0!"); 
+                return; 
+            }
+            
+            submitBtn.innerText = "SENDING...";
+            submitBtn.disabled = true;
+
+            // Send to Database
+            db.collection("leaderboard").add({
+                name: name,
+                score: score,
+                date: new Date()
+            })
+            .then(() => {
+                submitBtn.innerText = "SENT!";
+                submitBtn.style.background = "#333";
+                // Refresh the list immediately
+                fetchLeaderboard();
+            })
+            .catch((error) => {
+                console.error("Error adding score: ", error);
+                submitBtn.innerText = "ERROR";
+                submitBtn.disabled = false;
+            });
+        };
+
+        // 2. Fetch Leaderboard Function
+        function fetchLeaderboard() {
+            const listDiv = document.getElementById('leaderboard-list');
+            listDiv.innerHTML = "Loading...";
+            
+            // Get top 10 scores, ordered by score (High to Low)
+            db.collection("leaderboard")
+                .orderBy("score", "desc")
+                .limit(10)
+                .get()
+                .then((querySnapshot) => {
+                    let html = "";
+                    let rank = 1;
+                    
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        html += `
+                        <div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:4px 0;">
+                            <span><span style="color:#666">${rank}.</span> ${data.name}</span>
+                            <span style="color:#00ffff">${data.score}</span>
+                        </div>`;
+                        rank++;
+                    });
+                    
+                    if(html === "") html = "<div style='text-align:center; color:#666; margin-top:20px;'>NO SCORES YET</div>";
+                    listDiv.innerHTML = html;
+                })
+                .catch((error) => {
+                    console.error("Error getting leaderboard: ", error);
+                    listDiv.innerHTML = "Offline / Error";
+                });
+        }
+
+        // Load leaderboard automatically when game starts
+        fetchLeaderboard();
     </script>
 </body>
 </html>
+
 
 
