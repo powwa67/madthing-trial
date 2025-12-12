@@ -795,7 +795,7 @@
         };
     
         // --- CORE FUNCTIONS ---
-        function die() {
+       function die() {
             // HIGH SCORE CHECK
             if(score > highScore) {
                 highScore = score;
@@ -828,10 +828,7 @@
                 document.getElementById('submit-score-btn').disabled = false;
                 document.getElementById('submit-score-btn').innerText = "SUBMIT SCORE";
                 document.getElementById('submit-score-btn').style.background = "linear-gradient(180deg, #00aaff, #0055aa)";
- 
-            bgFail.style.display = 'block';
-            setTimeout(() => { bgFail.style.opacity = '1'; }, 10);
-            setTimeout(() => { deathModal.style.display = 'flex'; }, 800);
+            }
         }
 
         function winGame() {
@@ -1102,4 +1099,5 @@
     </script>
 </body>
 </html>
+
 
