@@ -604,7 +604,7 @@
                     // NEW: SHIELD SPAWN LOGIC (After Score 15)
                     let spawnShield = false;
                     let shieldY = 0;
-                    if (score >= 15 && Math.random() < 0.15 && !player.hasShield) {
+                   if (score >= 15 && score <= 30 && Math.random() < 0.15 && !player.hasShield) {
                         spawnShield = true;
                         // Spawn in the middle of the gap
                         let gapCenter = topH + (GAP / 2);
@@ -1027,3 +1027,4 @@
     </script>
 </body>
 </html>
+
