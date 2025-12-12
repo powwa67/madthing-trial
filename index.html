@@ -102,6 +102,39 @@
             text-shadow: 0 0 10px #bd00ff;
             letter-spacing: 1px;
         }
+
+        /* --- LEADERBOARD STYLES --- */
+        #leaderboard {
+            margin: 15px auto; 
+            width: 320px; 
+            height: 180px;
+            background: rgba(0, 5, 10, 0.9); 
+            border: 2px solid #00ffff; 
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border-radius: 6px; 
+            padding: 10px; 
+            overflow-y: auto; 
+            text-align: left; 
+            box-sizing: border-box;
+            font-family: 'Russo One', sans-serif; 
+        }
+
+        #leaderboard h3 {
+            color: #fff; 
+            margin: 0 0 10px 0; 
+            font-size: 1.2rem; 
+            text-align: center; 
+            border-bottom: 2px solid #333; 
+            padding-bottom: 5px; 
+            letter-spacing: 2px; 
+            text-transform: uppercase;
+        }
+
+        /* Custom Scrollbar */
+        #leaderboard::-webkit-scrollbar { width: 6px; }
+        #leaderboard::-webkit-scrollbar-track { background: #000; }
+        #leaderboard::-webkit-scrollbar-thumb { background: #bd00ff; border-radius: 3px; }
+        #leaderboard::-webkit-scrollbar-thumb:hover { background: #fff; }
         
         #perf-btn {
             background: rgba(0, 0, 0, 0.8);
@@ -183,35 +216,6 @@
             background: radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 100%);
             opacity: 0; pointer-events: none; transition: opacity 0.2s;
             z-index: 40; mix-blend-mode: overlay;
-
-            /* --- NEW LEADERBOARD STYLES --- */
-        #leaderboard {
-            margin: 15px auto; 
-            width: 320px; 
-            height: 180px;
-            background: rgba(0, 5, 10, 0.9); 
-            border: 2px solid #00ffff; 
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.8);
-            border-radius: 6px; 
-            padding: 10px; 
-            overflow-y: auto; 
-            text-align: left; 
-            box-sizing: border-box;
-            
-            /* THIS IS THE FONT FIX: */
-            font-family: 'Russo One', sans-serif; 
-        }
-
-        /* CUSTOM SCROLLBAR (Chrome/Safari) */
-        #leaderboard::-webkit-scrollbar { width: 6px; }
-        #leaderboard::-webkit-scrollbar-track { background: #000; }
-        #leaderboard::-webkit-scrollbar-thumb { background: #bd00ff; border-radius: 3px; }
-        #leaderboard::-webkit-scrollbar-thumb:hover { background: #fff; }
-
-        .rank-1 { color: #ffff00; text-shadow: 0 0 10px #ffff00; } /* GOLD */
-        .rank-2 { color: #00ffff; text-shadow: 0 0 10px #00ffff; } /* CYAN */
-        .rank-3 { color: #bd00ff; text-shadow: 0 0 10px #bd00ff; } /* PURPLE */
-        .rank-norm { color: #888; }
         }
     </style>
 </head>
@@ -240,13 +244,11 @@
                 <div id="menu-high-score" class="high-score-label">BEST: 0</div>
                 
                 <div id="leaderboard">
-    <h3 style="color: #fff; margin: 0 0 10px 0; font-size: 1.2rem; text-align: center; border-bottom: 2px solid #333; padding-bottom: 5px; letter-spacing: 2px; text-transform: uppercase;">
-        RANKING
-    </h3>
-    <div id="leaderboard-list" style="font-size: 0.85rem;">
-        <div style="text-align:center; color:#0ff; animation: blink 1s infinite;">CONNECTING...</div>
-    </div>
-</div>
+                    <h3>RANKING</h3>
+                    <div id="leaderboard-list" style="font-size: 0.85rem;">
+                        <div style="text-align:center; color:#0ff; animation: blink 1s infinite;">CONNECTING...</div>
+                    </div>
+                </div>
 
                 <div style="color:#ffff00; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
@@ -328,9 +330,9 @@
 
         // --- GAME CONFIG & VERSION CONTROL ---
         // Change this ID to force everyone to replay Level 1
-        const KEY_ID = "day_2"; 
+        const KEY_ID = "v1_2025_05_20"; 
         
-        let TARGET_SCORE = 50; 
+        let TARGET_SCORE = 30; // Score to unlock Level 1
         let SPEED = 6.5;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
@@ -657,9 +659,11 @@
                     // --- SHIELD SPAWN (SCORE 15-30 ONLY) ---
                     let spawnShield = false;
                     let shieldY = 0;
-                    if (score >= 15 && score <= 30 && Math.random() < 0.15 && !player.hasShield) {
+                    
+                    // FIXED: Added check for '!hasShieldSpawned'
+                    if (score >= 15 && score <= 30 && !hasShieldSpawned && Math.random() < 0.15 && !player.hasShield) {
                         spawnShield = true;
-                        hasShieldSpawned = true;
+                        hasShieldSpawned = true; // Mark as spawned for this run
                         let gapCenter = topH + (GAP / 2);
                         shieldY = gapCenter; 
                     }
@@ -852,11 +856,9 @@
             // --- AUTO SUBMIT LOGIC ---
             const savedName = localStorage.getItem('powa-username');
             if (savedName) {
-                // If we know who you are, fill the box and send it!
                 document.getElementById('username-input').value = savedName;
-                submitScore(true); // 'true' means it's an auto-submit
+                submitScore(true); // Auto-submit
             } else {
-                // If we don't know you, let you type
                 document.getElementById('username-input').disabled = false;
                 document.getElementById('submit-score-btn').disabled = false;
                 document.getElementById('submit-score-btn').innerText = "SUBMIT SCORE";
@@ -917,8 +919,7 @@
                 scoreCounter.style.display = 'none'; 
                 scoreCounter.innerText = "0";
             } else {
-                // THIS IS THE PART YOU ASKED ABOUT
-                // It ensures Level 1 players see the bar, not the numbers
+                // Ensure Level 1 players see the bar
                 infiniteMode = false;
                 progressContainer.style.display = 'flex';
                 scoreCounter.style.display = 'none';
@@ -1077,14 +1078,14 @@
         }
         const db = firebase.firestore();
 
-        // 1. Submit Score (Best Score Logic)
+        // 1. Submit Score (Best Score Logic + Auto Submit)
         window.submitScore = function(isAuto = false) {
             const nameInput = document.getElementById('username-input');
             const submitBtn = document.getElementById('submit-score-btn');
             
             const name = nameInput.value.toUpperCase().trim() || "ANONYMOUS";
             
-            // Save name for next time
+            // Save name for automatic future submissions
             localStorage.setItem('powa-username', name);
 
             if(score === 0) { 
@@ -1092,33 +1093,28 @@
                 return; 
             }
             
-            submitBtn.innerText = "CHECKING...";
+            submitBtn.innerText = isAuto ? "AUTO-SENDING..." : "CHECKING...";
             submitBtn.disabled = true;
             nameInput.disabled = true;
 
-            // STEP 1: Check if this name already exists
+            // Check if user exists
             db.collection("leaderboard").where("name", "==", name).get()
             .then((querySnapshot) => {
-                
                 if (!querySnapshot.empty) {
-                    // --- USER EXISTS ---
-                    // Get their document ID and old score
+                    // Update existing score if higher
                     let docId = querySnapshot.docs[0].id;
                     let oldScore = querySnapshot.docs[0].data().score;
 
                     if (score > oldScore) {
-                        // New High Score! Update the existing entry.
                         return db.collection("leaderboard").doc(docId).update({
                             score: score,
                             date: new Date()
                         }).then(() => "UPDATED");
                     } else {
-                        // Not a high score. Do nothing.
                         return Promise.resolve("KEPT_OLD");
                     }
                 } else {
-                    // --- NEW USER ---
-                    // Create a brand new entry
+                    // New user -> Add new entry
                     return db.collection("leaderboard").add({
                         name: name,
                         score: score,
@@ -1127,14 +1123,10 @@
                 }
             })
             .then((result) => {
-                // UI Feedback
-                if(result === "UPDATED") {
-                    submitBtn.innerText = "NEW HIGHSCORE!";
-                } else if(result === "KEPT_OLD") {
-                    submitBtn.innerText = "KEPT BEST"; 
-                } else {
-                    submitBtn.innerText = "SENT!";
-                }
+                if(result === "UPDATED") submitBtn.innerText = "NEW HIGHSCORE!";
+                else if(result === "KEPT_OLD") submitBtn.innerText = "KEPT BEST"; 
+                else submitBtn.innerText = "SENT!";
+                
                 submitBtn.style.background = "#333";
             })
             .catch((error) => {
@@ -1144,7 +1136,7 @@
             });
         };
 
-        // 2. Real-Time Listener
+        // 2. Real-Time Listener (Uniform Spacing Fix)
         db.collection("leaderboard")
             .orderBy("score", "desc")
             .limit(10)
@@ -1155,35 +1147,39 @@
                 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    // Sanitizing name to prevent HTML injection
                     const safeName = data.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     
-                    // Color Logic
-                    let rankStyle = "color: #aaa;"; // Default Gray
-                    let rowStyle = "border-bottom: 1px dashed #333; padding: 6px 0;";
+                    // --- COLOR SETTINGS ---
+                    let rankColor = "#aaaaaa"; 
+                    let bgStyle = "transparent";
+                    let borderStyle = "1px dashed #333";
                     
                     if(rank === 1) { 
-                        rankStyle = "color: #ffff00; text-shadow: 0 0 10px #ffff00; font-weight:bold;"; // GOLD
-                        rowStyle = "border-bottom: 1px solid #ffff00; padding: 8px 0; background: rgba(255, 255, 0, 0.1);"; 
+                        rankColor = "#ffff00"; 
+                        borderStyle = "1px solid #ffff00";
+                        bgStyle = "rgba(255, 255, 0, 0.1)";
                     }
                     else if(rank === 2) { 
-                        rankStyle = "color: #00ffff; text-shadow: 0 0 10px #00ffff; font-weight:bold;"; // CYAN
+                        rankColor = "#00ffff"; 
+                        borderStyle = "1px dotted #00ffff";
                     }
                     else if(rank === 3) { 
-                        rankStyle = "color: #bd00ff; text-shadow: 0 0 10px #bd00ff; font-weight:bold;"; // PURPLE
+                        rankColor = "#bd00ff"; 
+                        borderStyle = "1px dotted #bd00ff";
                     }
                     
+                    // --- UNIFORM SPACING ---
                     html += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; ${rowStyle}">
-                        <span style="${rankStyle} font-family: monospace; font-size: 0.9rem;">
-                            <span style="display:inline-block; width:25px;">#${rank}</span> ${safeName}
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:${borderStyle}; background:${bgStyle}; padding: 5px 4px; margin-bottom: 2px;">
+                        <span style="color:${rankColor}; font-family: 'Russo One', sans-serif; font-size: 0.9rem;">
+                            <span style="display:inline-block; width:25px; text-align:right; margin-right:10px;">#${rank}</span>${safeName}
                         </span>
-                        <span style="${rankStyle} font-size: 1rem;">${data.score}</span>
+                        <span style="color:${rankColor}; font-family: 'Russo One', sans-serif; font-size: 1rem;">${data.score}</span>
                     </div>`;
                     rank++;
                 });
                 
-                if(html === "") html = "<div style='text-align:center; color:#555; margin-top:30px; font-family:monospace;'>[NO_DATA]</div>";
+                if(html === "") html = "<div style='text-align:center; color:#555; margin-top:30px; font-family: monospace;'>[ NO SCORES YET ]</div>";
                 listDiv.innerHTML = html;
             }, (error) => {
                 console.error("Error getting real-time updates: ", error);
@@ -1193,10 +1189,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
