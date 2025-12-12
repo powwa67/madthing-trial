@@ -183,6 +183,33 @@
             background: radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 100%);
             opacity: 0; pointer-events: none; transition: opacity 0.2s;
             z-index: 40; mix-blend-mode: overlay;
+
+            /* --- NEW LEADERBOARD STYLES --- */
+        #leaderboard {
+            margin: 15px auto; 
+            width: 320px; 
+            height: 180px;
+            background: rgba(0, 5, 10, 0.9); 
+            border: 2px solid #00ffff; 
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border-radius: 6px; 
+            padding: 10px; 
+            overflow-y: auto; 
+            text-align: left; 
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace; /* Hacker Font */
+        }
+
+        /* CUSTOM SCROLLBAR (Chrome/Safari) */
+        #leaderboard::-webkit-scrollbar { width: 6px; }
+        #leaderboard::-webkit-scrollbar-track { background: #000; }
+        #leaderboard::-webkit-scrollbar-thumb { background: #bd00ff; border-radius: 3px; }
+        #leaderboard::-webkit-scrollbar-thumb:hover { background: #fff; }
+
+        .rank-1 { color: #ffff00; text-shadow: 0 0 10px #ffff00; } /* GOLD */
+        .rank-2 { color: #00ffff; text-shadow: 0 0 10px #00ffff; } /* CYAN */
+        .rank-3 { color: #bd00ff; text-shadow: 0 0 10px #bd00ff; } /* PURPLE */
+        .rank-norm { color: #888; }
         }
     </style>
 </head>
@@ -210,10 +237,12 @@
                 <h1 id="title" class="glitch-anim">POWA<br>PROXY</h1>
                 <div id="menu-high-score" class="high-score-label">BEST: 0</div>
                 
-                <div id="leaderboard" style="margin: 15px auto; width: 300px; background: rgba(0,0,0,0.85); border: 2px solid #555; border-radius: 8px; padding: 10px; height: 160px; overflow-y: auto; text-align: left; box-sizing: border-box;">
-                    <h3 style="color: #bd00ff; margin: 0 0 10px 0; font-size: 1rem; text-align: center; text-shadow: 0 0 5px #bd00ff;">GLOBAL TOP 10</h3>
-                    <div id="leaderboard-list" style="font-family: monospace; color: #fff; font-size: 0.9rem;">
-                        Loading...
+                <div id="leaderboard">
+                    <h3 style="color: #fff; margin: 0 0 10px 0; font-size: 1rem; text-align: center; border-bottom: 2px solid #333; padding-bottom: 5px; letter-spacing: 2px;">
+                        // GLOBAL_RANK //
+                    </h3>
+                    <div id="leaderboard-list" style="font-size: 0.85rem;">
+                        <div style="text-align:center; color:#0ff; animation: blink 1s infinite;">CONNECTING...</div>
                     </div>
                 </div>
 
@@ -1116,15 +1145,26 @@
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     const safeName = data.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    
+                    // Color Logic for Top 3
+                    let rankClass = "rank-norm";
+                    let rowStyle = "border-bottom: 1px dashed #222; padding: 6px 0;";
+                    
+                    if(rank === 1) { rankClass = "rank-1"; rowStyle = "border-bottom: 1px solid #ffff00; padding: 8px 0; background: rgba(255,255,0,0.05);"; }
+                    else if(rank === 2) rankClass = "rank-2";
+                    else if(rank === 3) rankClass = "rank-3";
+                    
                     html += `
-                    <div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:4px 0;">
-                        <span><span style="color:#666">${rank}.</span> ${safeName}</span>
-                        <span style="color:#00ffff">${data.score}</span>
+                    <div style="display:flex; justify-content:space-between; ${rowStyle}">
+                        <span class="${rankClass}">
+                            <span style="display:inline-block; width:20px;">#${rank}</span> ${safeName}
+                        </span>
+                        <span style="color:#fff; font-weight:bold;">${data.score}</span>
                     </div>`;
                     rank++;
                 });
                 
-                if(html === "") html = "<div style='text-align:center; color:#666; margin-top:20px;'>NO SCORES YET</div>";
+                if(html === "") html = "<div style='text-align:center; color:#666; margin-top:20px;'>NO_DATA_FOUND</div>";
                 listDiv.innerHTML = html;
             }, (error) => {
                 console.error("Error getting real-time updates: ", error);
@@ -1134,6 +1174,7 @@
     </script>
 </body>
 </html>
+
 
 
 
