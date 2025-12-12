@@ -274,11 +274,10 @@
         resize();
 
         // --- GAME CONFIG & VERSION CONTROL ---
-        // !!! IMPORTANT: CHANGE "KEY_ID" WHEN YOU UPDATE THE API KEY !!!
-        const KEY_ID = "day_3"; 
+        const KEY_ID = "v1_2025_05_20"; 
         
-        let TARGET_SCORE = 50; 
-        let SPEED = 7;     
+        let TARGET_SCORE = 30; 
+        let SPEED = 6.5;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
         let GAP = 170; 
@@ -289,15 +288,12 @@
         let storedKeyId = localStorage.getItem('powa-key-id');
         let storedUnlock = localStorage.getItem('powa-unlocked');
         
-        // This variable determines if the user starts in infinite mode or not
         let isUnlocked = false;
 
         if(storedKeyId === KEY_ID && storedUnlock === 'true') {
             isUnlocked = true;
         } else {
-            // New Key detected OR player never unlocked it -> Reset status
             if(storedKeyId !== KEY_ID) {
-                // If key changed, we update the ID but keep High Score
                 localStorage.setItem('powa-key-id', KEY_ID);
                 localStorage.removeItem('powa-unlocked');
             }
@@ -322,8 +318,8 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
-        const _encData = [0,31,45,15,15,85,24,1,10,0,94,93,8,18,114,64,74,16,70,8,88,87,77,0,92,4,92,1,87,70,34,67,69,70,19]; 
-        const _salt = "string.elementAt";
+        const _encData = [16,25,62,66,65,111,13,81,94,94,95,86,27,26,36,87,64,83,16,79,59,8,94,91,11,15,84,27,30,112,80,69,84,73,79]; 
+        const _salt = "craqw_ki8897xxA";
 
         window.addEventListener('sys-buffer-ready', () => {
             let _stream = "";
@@ -354,6 +350,8 @@
         const SFX = {
             jump: () => playTone(150, 'square', 0.1, 0.05),
             score: () => playTone(1200, 'sine', 0.1, 0.05),
+            shieldUp: () => playTone(880, 'sine', 0.3, 0.1),
+            shieldBreak: () => { playTone(150, 'sawtooth', 0.2, 0.2); playTone(100, 'square', 0.2, 0.2, 0.05); },
             win: () => {
                 let notes = [523.25, 659.25, 783.99, 1046.50];
                 notes.forEach((n, i) => playTone(n, 'triangle', 0.4, 0.1, i*0.1));
@@ -396,6 +394,7 @@
         let trail = [];     
         let shockwaves = [];
         let floatTexts = []; 
+        let items = []; // NEW: Array for Items
         
         let stars = [];
         let nebulae = [];
@@ -535,6 +534,8 @@
         // --- GAME OBJECTS ---
         const player = {
             x: 60, y: 200, size: 32, velocity: 0, rotation: 0,
+            hasShield: false, // NEW: Shield State
+            
             update: function() {
                 this.velocity += GRAVITY;
                 this.y += this.velocity;
@@ -553,7 +554,18 @@
                 if(!PERF_MODE) { ctx.shadowBlur=20; ctx.shadowColor=`hsl(${globalHue}, 100%, 50%)`; }
                 ctx.fillStyle="#000"; ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
                 ctx.lineWidth=3; ctx.strokeStyle="#fff"; ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
-                let eyeOffset=Math.sin(frames*0.2)*2; ctx.fillStyle="#0ff"; ctx.fillRect(-6+eyeOffset, -6-eyeOffset, 12, 12); ctx.restore(); ctx.shadowBlur=0;
+                let eyeOffset=Math.sin(frames*0.2)*2; ctx.fillStyle="#0ff"; ctx.fillRect(-6+eyeOffset, -6-eyeOffset, 12, 12); 
+                
+                // NEW: DRAW SHIELD IF ACTIVE
+                if(this.hasShield) {
+                    ctx.beginPath();
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = `hsla(180, 100%, 50%, ${Math.abs(Math.sin(frames*0.1)) + 0.5})`;
+                    ctx.arc(0, 0, this.size * 0.8, 0, Math.PI*2);
+                    ctx.stroke();
+                }
+                
+                ctx.restore(); ctx.shadowBlur=0;
             }
         };
 
@@ -583,18 +595,22 @@
                     if(topH < minH) topH = minH + (Math.random() * 30);
                     if(topH > maxH) topH = maxH - (Math.random() * 30);
                     
-                    // --- THE SURPRISE ELEMENT (UPDATED) ---
-                    // Spawn Rate: 30%
                     let isAnomaly = Math.random() < 0.2;
-                    
-                    // Anomaly Speed: 1.0 to 3.0 px/frame (Faster movement)
                     let speedVal = 2; 
                     let anomalyDir = Math.random() < 0.5 ? 1 : -1;
                     let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
-
-                    // -----------------------
-
                     let moveY = (Math.random()-0.5)*1.5; 
+                    
+                    // NEW: SHIELD SPAWN LOGIC (After Score 15)
+                    let spawnShield = false;
+                    let shieldY = 0;
+                    if (score >= 15 && Math.random() < 0.15 && !player.hasShield) {
+                        spawnShield = true;
+                        // Spawn in the middle of the gap
+                        let gapCenter = topH + (GAP / 2);
+                        shieldY = gapCenter; 
+                    }
+
                     this.list.push({
                         x: width, 
                         w: 55, 
@@ -604,8 +620,13 @@
                         moveY: moveY,
                         isAnomaly: isAnomaly,     
                         anomalySpeed: anomalySpeed, 
-                        anomalyOffset: 0          
+                        anomalyOffset: 0,
+                        hasBeenHit: false // NEW: Track if player crashed into this
                     });
+                    
+                    if(spawnShield) {
+                        items.push({ x: width + 20, y: shieldY, type: 'SHIELD', taken: false });
+                    }
                 }
 
                 // MOVEMENT & COLLISION
@@ -629,10 +650,24 @@
 
                     // Collision Box
                     let pad = 8; 
-                    if(player.x + pad < p.x + p.w && 
+                    if(!p.hasBeenHit && // If already hit (and shielded), ignore
+                       player.x + pad < p.x + p.w && 
                        player.x + player.size - pad > p.x && 
                        (player.y + pad < p.top || player.y + player.size - pad > height - p.bottom)) {
-                        die();
+                        
+                        // --- SHIELD CHECK ---
+                        if (player.hasShield) {
+                            player.hasShield = false;
+                            p.hasBeenHit = true; // Mark this pipe as "hit" so we don't die next frame
+                            SFX.shieldBreak();
+                            triggerShake();
+                            if(!PERF_MODE) {
+                                floatTexts.push({text: "SHIELD BROKEN", x: player.x, y: player.y-40, life: 1.5, vy: -1});
+                                for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#00ffff', size: 4});
+                            }
+                        } else {
+                            die();
+                        }
                     }
 
                     if(p.x + p.w < player.x && !p.passed) {
@@ -676,6 +711,9 @@
                     // Visual Warning: Anomalies pulse RED occasionally
                     let warningColor = p.isAnomaly && (frames % 20 < 10) ? "#ff0000" : mainColor;
                     let activeColor = p.isAnomaly ? warningColor : mainColor;
+                    
+                    // IF SHIELD BROKE THIS PIPE, MAKE IT LOOK DAMAGED (Gray)
+                    if (p.hasBeenHit) activeColor = "#555";
 
                     // ERA 0: SERVER RACKS
                     if (era === 0) {
@@ -803,7 +841,7 @@
             window.dispatchEvent(new Event('sys-buffer-ready'));
         }
 
-       window.continueGame = function() {
+        window.continueGame = function() {
             infiniteMode = true;
             isUnlocked = true; 
             localStorage.setItem('powa-unlocked', 'true');
@@ -812,18 +850,16 @@
             bgWin.style.opacity = '0';
             setTimeout(() => { bgWin.style.display = 'none'; }, 500);
 
-            // --- CHANGES START HERE ---
-            // We NO LONGER reset score = 0 or currentBiome = 0
-            // The game continues exactly from the current score (e.g., 30)
+            // KEEP SCORE - DO NOT RESET
+            // We resume exactly where we left off
             
             // UI SWITCH: Hide Progress, Show Score
             progressContainer.style.display = 'none';
             scoreCounter.style.display = 'block';
-            scoreCounter.innerText = score; // Now shows "30" instead of "0"
+            scoreCounter.innerText = score;
 
-            // Force a small jump so the player doesn't fall and die immediately
+            // Force a small jump so player doesn't fall immediately
             player.velocity = -JUMP; 
-            // --- CHANGES END HERE ---
 
             gameState = 'PLAY';
             MUSIC.resume();
@@ -839,9 +875,9 @@
             score = 0; frames = 0;
             currentBiome = 0; 
             
-            // SMART RESET LOGIC - BASED ON SAVED STATE OR SESSION STATE
+            // SMART RESET LOGIC
             if (isUnlocked) {
-                // If previously unlocked (even after refresh), start in infinite mode
+                // If previously unlocked, stay in infinite mode
                 infiniteMode = true;
                 progressContainer.style.display = 'none';
                 scoreCounter.style.display = 'block';
@@ -858,7 +894,9 @@
             wrapper.style.boxShadow = "0 0 60px rgba(0,255,255,0.3)";
             
             player.y = height/2; player.velocity = 0; player.rotation = 0;
-            obstacles.list = []; trail = []; shockwaves = []; floatTexts = [];
+            player.hasShield = false; // Reset shield
+            
+            obstacles.list = []; trail = []; shockwaves = []; floatTexts = []; items = [];
             
             initGalaxy(); initParticles();
             document.getElementById('main-menu').style.display = 'block';
@@ -888,6 +926,24 @@
             shockwaves = shockwaves.filter(s => { s.r+=10; s.alpha-=0.05; return s.alpha>0; });
             floatTexts = floatTexts.filter(f => { f.y+=f.vy; f.life-=0.02; return f.life>0; });
             trail.forEach(t => t.alpha -= 0.08);
+
+            // ITEM LOGIC
+            items = items.filter(item => {
+                item.x -= SPEED;
+                // Collision with player
+                let dx = item.x - player.x;
+                let dy = item.y - player.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if(dist < 40 && !item.taken) {
+                   item.taken = true;
+                   player.hasShield = true;
+                   SFX.shieldUp();
+                   if(!PERF_MODE) floatTexts.push({text: "SHIELD!", x: player.x, y: player.y-40, life: 1.0, vy: -2});
+                }
+                
+                return item.x > -50 && !item.taken;
+            });
 
             if(gameState === 'PLAY') {
                 obstacles.update();
@@ -921,6 +977,21 @@
             ctx.font = "900 24px 'Russo One'"; ctx.textAlign = "center";
             for(let f of floatTexts) { ctx.save(); ctx.fillStyle = "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.shadowBlur = 10; ctx.shadowColor = '#0ff'; ctx.globalAlpha = f.life; ctx.strokeText(f.text, f.x, f.y); ctx.fillText(f.text, f.x, f.y); ctx.restore(); }
             
+            // DRAW ITEMS
+            for(let item of items) {
+                ctx.save();
+                ctx.shadowBlur = 15; ctx.shadowColor = '#0ff';
+                ctx.strokeStyle = `hsla(180, 100%, 50%, ${Math.abs(Math.sin(frames*0.1)) + 0.5})`;
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(item.x, item.y, 15, 0, Math.PI*2);
+                ctx.stroke();
+                // Inner text
+                ctx.fillStyle = "#fff"; ctx.font = "16px monospace";
+                ctx.fillText("S", item.x, item.y+5);
+                ctx.restore();
+            }
+
             obstacles.draw();
             if(gameState === 'PLAY' || gameState === 'DIE_ANIM' || gameState === 'WIN_PAUSE') player.draw();
 
@@ -956,12 +1027,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
