@@ -410,6 +410,7 @@
         // --- STATE & ASSETS ---
         let frames = 0;
         let score = 0;
+        let hasShieldSpawned = false;
         let gameState = 'START';
         let globalHue = 0; 
         let bgOffset = 0;  
@@ -627,6 +628,7 @@
                     let shieldY = 0;
                     if (score >= 15 && score <= 30 && Math.random() < 0.15 && !player.hasShield) {
                         spawnShield = true;
+                        hasShieldSpawned = true;
                         let gapCenter = topH + (GAP / 2);
                         shieldY = gapCenter; 
                     }
@@ -874,6 +876,7 @@
             gameState = 'START';
             score = 0; frames = 0;
             currentBiome = 0; 
+            hasShieldSpawned = false;
             
             if (isUnlocked) {
                 infiniteMode = true;
@@ -1099,5 +1102,6 @@
     </script>
 </body>
 </html>
+
 
 
