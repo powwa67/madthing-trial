@@ -1099,17 +1099,15 @@
             });
         };
 
-        // 2. Fetch Leaderboard Function
+       // 2. Real-Time Leaderboard Function
         function fetchLeaderboard() {
             const listDiv = document.getElementById('leaderboard-list');
-            listDiv.innerHTML = "Loading...";
             
-            // Get top 10 scores, ordered by score (High to Low)
+            // "onSnapshot" listens for changes automatically
             db.collection("leaderboard")
                 .orderBy("score", "desc")
                 .limit(10)
-                .get()
-                .then((querySnapshot) => {
+                .onSnapshot((querySnapshot) => {
                     let html = "";
                     let rank = 1;
                     
@@ -1125,8 +1123,7 @@
                     
                     if(html === "") html = "<div style='text-align:center; color:#666; margin-top:20px;'>NO SCORES YET</div>";
                     listDiv.innerHTML = html;
-                })
-                .catch((error) => {
+                }, (error) => {
                     console.error("Error getting leaderboard: ", error);
                     listDiv.innerHTML = "Offline / Error";
                 });
@@ -1137,6 +1134,7 @@
     </script>
 </body>
 </html>
+
 
 
 
