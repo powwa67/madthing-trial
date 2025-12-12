@@ -197,7 +197,9 @@
             overflow-y: auto; 
             text-align: left; 
             box-sizing: border-box;
-            font-family: 'Courier New', monospace; /* Hacker Font */
+            
+            /* THIS IS THE FONT FIX: */
+            font-family: 'Russo One', sans-serif; 
         }
 
         /* CUSTOM SCROLLBAR (Chrome/Safari) */
@@ -238,13 +240,13 @@
                 <div id="menu-high-score" class="high-score-label">BEST: 0</div>
                 
                 <div id="leaderboard">
-                    <h3 style="color: #fff; margin: 0 0 10px 0; font-size: 1rem; text-align: center; border-bottom: 2px solid #333; padding-bottom: 5px; letter-spacing: 2px;">
-                        // GLOBAL_RANK //
-                    </h3>
-                    <div id="leaderboard-list" style="font-size: 0.85rem;">
-                        <div style="text-align:center; color:#0ff; animation: blink 1s infinite;">CONNECTING...</div>
-                    </div>
-                </div>
+    <h3 style="color: #fff; margin: 0 0 10px 0; font-size: 1.2rem; text-align: center; border-bottom: 2px solid #333; padding-bottom: 5px; letter-spacing: 2px; text-transform: uppercase;">
+        RANKING
+    </h3>
+    <div id="leaderboard-list" style="font-size: 0.85rem;">
+        <div style="text-align:center; color:#0ff; animation: blink 1s infinite;">CONNECTING...</div>
+    </div>
+</div>
 
                 <div style="color:#ffff00; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
@@ -1191,6 +1193,7 @@
     </script>
 </body>
 </html>
+
 
 
 
