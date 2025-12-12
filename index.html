@@ -1037,14 +1037,14 @@
         }
         const db = firebase.firestore();
 
-        // 1. Submit Score
+        // 1. Submit Score (Best Score Logic)
         window.submitScore = function(isAuto = false) {
             const nameInput = document.getElementById('username-input');
             const submitBtn = document.getElementById('submit-score-btn');
             
             const name = nameInput.value.toUpperCase().trim() || "ANONYMOUS";
             
-            // Save the name for next time!
+            // Save name for next time
             localStorage.setItem('powa-username', name);
 
             if(score === 0) { 
@@ -1052,21 +1052,53 @@
                 return; 
             }
             
-            submitBtn.innerText = "AUTO-SENDING...";
+            submitBtn.innerText = "CHECKING...";
             submitBtn.disabled = true;
             nameInput.disabled = true;
 
-            db.collection("leaderboard").add({
-                name: name,
-                score: score,
-                date: new Date()
+            // STEP 1: Check if this name already exists
+            db.collection("leaderboard").where("name", "==", name).get()
+            .then((querySnapshot) => {
+                
+                if (!querySnapshot.empty) {
+                    // --- USER EXISTS ---
+                    // Get their document ID and old score
+                    let docId = querySnapshot.docs[0].id;
+                    let oldScore = querySnapshot.docs[0].data().score;
+
+                    if (score > oldScore) {
+                        // New High Score! Update the existing entry.
+                        return db.collection("leaderboard").doc(docId).update({
+                            score: score,
+                            date: new Date()
+                        }).then(() => "UPDATED");
+                    } else {
+                        // Not a high score. Do nothing.
+                        return Promise.resolve("KEPT_OLD");
+                    }
+                } else {
+                    // --- NEW USER ---
+                    // Create a brand new entry
+                    return db.collection("leaderboard").add({
+                        name: name,
+                        score: score,
+                        date: new Date()
+                    }).then(() => "ADDED");
+                }
             })
-            .then(() => {
-                submitBtn.innerText = "SENT!";
+            .then((result) => {
+                // UI Feedback
+                if(result === "UPDATED") {
+                    submitBtn.innerText = "NEW HIGHSCORE!";
+                } else if(result === "KEPT_OLD") {
+                    submitBtn.innerText = "KEPT BEST"; 
+                } else {
+                    submitBtn.innerText = "SENT!";
+                }
                 submitBtn.style.background = "#333";
             })
             .catch((error) => {
-                console.error("Error adding score: ", error);
+                console.error("Error submitting score: ", error);
                 submitBtn.innerText = "ERROR";
                 submitBtn.disabled = false;
             });
@@ -1102,6 +1134,7 @@
     </script>
 </body>
 </html>
+
 
 
 
