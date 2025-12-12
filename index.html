@@ -1059,21 +1059,21 @@
             appId: "1:522344119710:web:3bd572ef6580abd4c76a8f"
         };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
+       // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const db = firebase.firestore();
 
-        // 1. Submit Score Function
+        // 1. Submit Score Function (WRITING)
         window.submitScore = function() {
             const nameInput = document.getElementById('username-input');
             const submitBtn = document.getElementById('submit-score-btn');
             
-            // Clean up name (remove spaces, uppercase)
-            // If empty, default to "ANONYMOUS"
             const name = nameInput.value.toUpperCase().trim() || "ANONYMOUS";
             
             if(score === 0) { 
-                alert("You need a score higher than 0!"); 
+                alert("Play the game first!"); 
                 return; 
             }
             
@@ -1089,8 +1089,12 @@
             .then(() => {
                 submitBtn.innerText = "SENT!";
                 submitBtn.style.background = "#333";
-                // Refresh the list immediately
-                fetchLeaderboard();
+                
+                // CRITICAL CHANGE: We DO NOT call fetchLeaderboard() here anymore.
+                // The onSnapshot listener below will see this new data and update automatically.
+                
+                // Disable input so they don't spam
+                nameInput.disabled = true;
             })
             .catch((error) => {
                 console.error("Error adding score: ", error);
@@ -1099,34 +1103,35 @@
             });
         };
 
-       // 2. Real-Time Leaderboard Function
-        function fetchLeaderboard() {
-            const listDiv = document.getElementById('leaderboard-list');
-            
-            // "onSnapshot" listens for changes automatically
-            db.collection("leaderboard")
-                .orderBy("score", "desc")
-                .limit(10)
-                .onSnapshot((querySnapshot) => {
-                    let html = "";
-                    let rank = 1;
+        // 2. Real-Time Listener (READING)
+        // This runs immediately and stays open to catch any changes
+        db.collection("leaderboard")
+            .orderBy("score", "desc")
+            .limit(10)
+            .onSnapshot((querySnapshot) => {
+                // This code runs AUTOMATICALLY every time the database changes
+                const listDiv = document.getElementById('leaderboard-list');
+                let html = "";
+                let rank = 1;
+                
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    // Basic HTML sanitation to prevent weird text
+                    const safeName = data.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        html += `
-                        <div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:4px 0;">
-                            <span><span style="color:#666">${rank}.</span> ${data.name}</span>
-                            <span style="color:#00ffff">${data.score}</span>
-                        </div>`;
-                        rank++;
-                    });
-                    
-                    if(html === "") html = "<div style='text-align:center; color:#666; margin-top:20px;'>NO SCORES YET</div>";
-                    listDiv.innerHTML = html;
-                }, (error) => {
-                    console.error("Error getting leaderboard: ", error);
-                    listDiv.innerHTML = "Offline / Error";
+                    html += `
+                    <div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:4px 0;">
+                        <span><span style="color:#666">${rank}.</span> ${safeName}</span>
+                        <span style="color:#00ffff">${data.score}</span>
+                    </div>`;
+                    rank++;
                 });
+                
+                if(html === "") html = "<div style='text-align:center; color:#666; margin-top:20px;'>NO SCORES YET</div>";
+                listDiv.innerHTML = html;
+            }, (error) => {
+                console.error("Error getting real-time updates: ", error);
+            });
         }
 
         // Load leaderboard automatically when game starts
@@ -1134,6 +1139,7 @@
     </script>
 </body>
 </html>
+
 
 
 
