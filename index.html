@@ -796,6 +796,7 @@
     
         // --- CORE FUNCTIONS ---
         function die() {
+            // HIGH SCORE CHECK
             if(score > highScore) {
                 highScore = score;
                 localStorage.setItem('powa-high-score', highScore);
@@ -811,12 +812,23 @@
             deathScoreDisplay.innerText = `SCORE: ${score}`;
             deathBestDisplay.innerText = `BEST: ${highScore}`;
 
-            // Re-enable input for next time
-            document.getElementById('username-input').disabled = false;
-            document.getElementById('submit-score-btn').disabled = false;
-            document.getElementById('submit-score-btn').innerText = "SUBMIT SCORE";
-            document.getElementById('submit-score-btn').style.background = "linear-gradient(180deg, #00aaff, #0055aa)";
+            bgFail.style.display = 'block';
+            setTimeout(() => { bgFail.style.opacity = '1'; }, 10);
+            setTimeout(() => { deathModal.style.display = 'flex'; }, 800);
 
+            // --- AUTO SUBMIT LOGIC ---
+            const savedName = localStorage.getItem('powa-username');
+            if (savedName) {
+                // If we know who you are, fill the box and send it!
+                document.getElementById('username-input').value = savedName;
+                submitScore(true); // 'true' means it's an auto-submit
+            } else {
+                // If we don't know you, let you type
+                document.getElementById('username-input').disabled = false;
+                document.getElementById('submit-score-btn').disabled = false;
+                document.getElementById('submit-score-btn').innerText = "SUBMIT SCORE";
+                document.getElementById('submit-score-btn').style.background = "linear-gradient(180deg, #00aaff, #0055aa)";
+ 
             bgFail.style.display = 'block';
             setTimeout(() => { bgFail.style.opacity = '1'; }, 10);
             setTimeout(() => { deathModal.style.display = 'flex'; }, 800);
@@ -1026,16 +1038,23 @@
         const db = firebase.firestore();
 
         // 1. Submit Score
-        window.submitScore = function() {
+        window.submitScore = function(isAuto = false) {
             const nameInput = document.getElementById('username-input');
             const submitBtn = document.getElementById('submit-score-btn');
             
             const name = nameInput.value.toUpperCase().trim() || "ANONYMOUS";
             
-            if(score === 0) { alert("Play the game first!"); return; }
+            // Save the name for next time!
+            localStorage.setItem('powa-username', name);
+
+            if(score === 0) { 
+                if(!isAuto) alert("Play the game first!"); 
+                return; 
+            }
             
-            submitBtn.innerText = "SENDING...";
+            submitBtn.innerText = "AUTO-SENDING...";
             submitBtn.disabled = true;
+            nameInput.disabled = true;
 
             db.collection("leaderboard").add({
                 name: name,
@@ -1045,8 +1064,6 @@
             .then(() => {
                 submitBtn.innerText = "SENT!";
                 submitBtn.style.background = "#333";
-                nameInput.disabled = true;
-                // No fetchLeaderboard call needed here, onSnapshot handles it
             })
             .catch((error) => {
                 console.error("Error adding score: ", error);
@@ -1085,3 +1102,4 @@
     </script>
 </body>
 </html>
+
