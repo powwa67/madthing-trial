@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>POWA-PROXY: GALAXY</title>
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
     <style>
         body {
             margin: 0;
@@ -181,8 +185,6 @@
             z-index: 40; mix-blend-mode: overlay;
         }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -239,7 +241,7 @@
             <div style="width: 200px; height: 4px; background: #333; margin: 20px 0;"></div>
             <button class="btn" style="background: linear-gradient(180deg, #555, #222); border-color:#888;" onclick="resetLevel()">TRY AGAIN</button>
         </div>
-        
+
         <div id="win-modal" class="modal">
             <h1 style="color:#00ffff; font-size:3rem; text-shadow: 0 0 20px #00ffff;">ACCESS GRANTED</h1>
             <div class="key-container">
@@ -294,7 +296,8 @@
         resize();
 
         // --- GAME CONFIG & VERSION CONTROL ---
-        const KEY_ID = "v1_2025_05_20"; 
+        // Change this ID to force everyone to replay Level 1
+        const KEY_ID = "day_2"; 
         
         let TARGET_SCORE = 50; 
         let SPEED = 6.5;     
@@ -338,6 +341,7 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
+        // --- API KEY HIDDEN STREAM ---
         const _encData = [16,25,62,66,65,111,13,81,94,94,95,86,27,26,36,87,64,83,16,79,59,8,94,91,11,15,84,27,30,112,80,69,84,73,79]; 
         const _salt = "craqw_ki8897xxA";
 
@@ -414,7 +418,7 @@
         let trail = [];     
         let shockwaves = [];
         let floatTexts = []; 
-        let items = []; // NEW: Array for Items
+        let items = []; // For Shield
         
         let stars = [];
         let nebulae = [];
@@ -554,7 +558,7 @@
         // --- GAME OBJECTS ---
         const player = {
             x: 60, y: 200, size: 32, velocity: 0, rotation: 0,
-            hasShield: false, // NEW: Shield State
+            hasShield: false, 
             
             update: function() {
                 this.velocity += GRAVITY;
@@ -576,7 +580,7 @@
                 ctx.lineWidth=3; ctx.strokeStyle="#fff"; ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
                 let eyeOffset=Math.sin(frames*0.2)*2; ctx.fillStyle="#0ff"; ctx.fillRect(-6+eyeOffset, -6-eyeOffset, 12, 12); 
                 
-                // NEW: DRAW SHIELD IF ACTIVE
+                // DRAW SHIELD IF ACTIVE
                 if(this.hasShield) {
                     ctx.beginPath();
                     ctx.lineWidth = 3;
@@ -592,7 +596,6 @@
         const obstacles = {
             list: [],
             
-            // --- "ANOMALY" UPDATE LOGIC (AGGRESSIVE) ---
             update: function() {
                 // SPAWN LOGIC
                 if(frames % 55 === 0) {
@@ -601,7 +604,6 @@
                     
                     let prevTop = (this.list.length > 0) ? this.list[this.list.length-1].top : (height - GAP) / 2;
                     
-                    // 1. Standard Randomness
                     let direction = Math.random() < 0.5 ? 1 : -1;
                     if (prevTop < minH + 50) direction = 1;
                     else if (prevTop > maxH - 50) direction = -1;
@@ -611,7 +613,6 @@
                     let step = Math.floor(Math.random() * (maxStep - minStep + 1)) + minStep;
                     let topH = prevTop + (step * direction);
 
-                    // Clamp
                     if(topH < minH) topH = minH + (Math.random() * 30);
                     if(topH > maxH) topH = maxH - (Math.random() * 30);
                     
@@ -621,12 +622,11 @@
                     let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
                     let moveY = (Math.random()-0.5)*1.5; 
                     
-                    // NEW: SHIELD SPAWN LOGIC (After Score 15)
+                    // --- SHIELD SPAWN (SCORE 15-30 ONLY) ---
                     let spawnShield = false;
                     let shieldY = 0;
-                   if (score >= 15 && score <= 30 && Math.random() < 0.15 && !player.hasShield) {
+                    if (score >= 15 && score <= 30 && Math.random() < 0.15 && !player.hasShield) {
                         spawnShield = true;
-                        // Spawn in the middle of the gap
                         let gapCenter = topH + (GAP / 2);
                         shieldY = gapCenter; 
                     }
@@ -641,7 +641,7 @@
                         isAnomaly: isAnomaly,     
                         anomalySpeed: anomalySpeed, 
                         anomalyOffset: 0,
-                        hasBeenHit: false // NEW: Track if player crashed into this
+                        hasBeenHit: false
                     });
                     
                     if(spawnShield) {
@@ -652,20 +652,13 @@
                 // MOVEMENT & COLLISION
                 for(let p of this.list) {
                     p.x -= SPEED;
-
-                    // 1. STANDARD FLOAT
                     p.top += p.moveY; 
                     if(p.top < 30 || p.top > height - GAP - 30) p.moveY *= -1;
 
-                    // 2. ANOMALY MOVEMENT (Faster)
                     if(p.isAnomaly) {
                         p.top += p.anomalySpeed;
                         p.bottom -= p.anomalySpeed; 
-                        
-                        // Bounce smoothly if near edges
-                        if(p.top < 40 || p.top > height - GAP - 40) {
-                            p.anomalySpeed *= -1;
-                        }
+                        if(p.top < 40 || p.top > height - GAP - 40) p.anomalySpeed *= -1;
                     }
 
                     // Collision Box
@@ -678,7 +671,7 @@
                         // --- SHIELD CHECK ---
                         if (player.hasShield) {
                             player.hasShield = false;
-                            p.hasBeenHit = true; // Mark this pipe as "hit" so we don't die next frame
+                            p.hasBeenHit = true; 
                             SFX.shieldBreak();
                             triggerShake();
                             if(!PERF_MODE) {
@@ -719,7 +712,6 @@
                 if(this.list.length > 0 && this.list[0].x < -100) this.list.shift();
             },
 
-            // --- DRAW LOGIC ---
             draw: function() {
                 let era = Math.floor(score / 10) % 3; 
                 let mainColor = BIOMES[currentBiome].border;
@@ -727,28 +719,17 @@
                 let pulse = Math.sin(frames * 0.1) * 0.5 + 0.5;
 
                 for(let p of this.list) {
-                    
-                    // Visual Warning: Anomalies pulse RED occasionally
                     let warningColor = p.isAnomaly && (frames % 20 < 10) ? "#ff0000" : mainColor;
                     let activeColor = p.isAnomaly ? warningColor : mainColor;
-                    
-                    // IF SHIELD BROKE THIS PIPE, MAKE IT LOOK DAMAGED (Gray)
                     if (p.hasBeenHit) activeColor = "#555";
 
-                    // ERA 0: SERVER RACKS
                     if (era === 0) {
                         if(!PERF_MODE) { ctx.shadowBlur = p.isAnomaly ? 25 : (15 + (pulse * 10)); ctx.shadowColor = activeColor; }
                         [p.top, height - p.bottom].forEach((yStart, i) => {
                             let h = (i===0) ? p.top : p.bottom;
                             let yRect = (i===0) ? 0 : height - p.bottom;
-                            
-                            ctx.fillStyle = "rgba(10, 10, 10, 0.9)"; 
-                            ctx.fillRect(p.x, yRect, p.w, h);
-                            
-                            ctx.lineWidth = 3; ctx.strokeStyle = activeColor; 
-                            ctx.strokeRect(p.x, yRect - (i===0?5:0), p.w, h + 5);
-                            
-                            // Tech Lights
+                            ctx.fillStyle = "rgba(10, 10, 10, 0.9)"; ctx.fillRect(p.x, yRect, p.w, h);
+                            ctx.lineWidth = 3; ctx.strokeStyle = activeColor; ctx.strokeRect(p.x, yRect - (i===0?5:0), p.w, h + 5);
                             if(!PERF_MODE) {
                                 ctx.fillStyle = activeColor;
                                 for(let k = 0; k < h; k += 40) {
@@ -762,13 +743,10 @@
                                 }
                             }
                         });
-                        // End Caps
                         ctx.fillStyle = activeColor; 
                         ctx.fillRect(p.x + 4, p.top - 15, p.w - 8, 15); 
                         ctx.fillRect(p.x + 4, height - p.bottom, p.w - 8, 15); 
                     }
-                    
-                    // ERA 1: DATA STREAM
                     else if (era === 1) {
                         if(!PERF_MODE) { ctx.shadowBlur = 10; ctx.shadowColor = activeColor; }
                         ctx.fillStyle = "rgba(0, 20, 10, 0.85)"; 
@@ -791,13 +769,10 @@
                         ctx.strokeRect(p.x, -5, p.w, p.top + 5); ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom + 5);
                         ctx.setLineDash([]); 
                     }
-                    
-                    // ERA 2: QUANTUM SCANNER
                     else if (era === 2) {
                         if(!PERF_MODE) { ctx.shadowBlur = 15; ctx.shadowColor = activeColor; }
                         ctx.fillStyle = "rgba(0, 5, 10, 0.95)";
                         ctx.fillRect(p.x, 0, p.w, p.top); ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
-                        
                         ctx.save(); ctx.strokeStyle = activeColor; ctx.lineWidth = 3;
                         ctx.beginPath();
                         ctx.moveTo(p.x + 12, 0); ctx.lineTo(p.x + 12, p.top);
@@ -805,14 +780,12 @@
                         ctx.moveTo(p.x + 12, height - p.bottom); ctx.lineTo(p.x + 12, height);
                         ctx.moveTo(p.x + p.w - 12, height - p.bottom); ctx.lineTo(p.x + p.w - 12, height);
                         ctx.stroke();
-                        
                         let scanPos = (Math.sin(frames * 0.05) + 1) * 0.5; 
                         ctx.fillStyle = "#fff"; ctx.shadowBlur = 15; ctx.shadowColor = "#fff";
                         ctx.fillRect(p.x, scanPos * p.top, p.w, 4);
                         let botY = (height - p.bottom) + (scanPos * p.bottom);
                         ctx.fillRect(p.x, botY, p.w, 4);
                         ctx.restore();
-                        
                         ctx.lineWidth = 2; ctx.strokeStyle = activeColor;
                         ctx.strokeRect(p.x, -2, p.w, p.top+2); ctx.strokeRect(p.x, height - p.bottom, p.w, p.bottom+2);
                     }
@@ -823,7 +796,6 @@
     
         // --- CORE FUNCTIONS ---
         function die() {
-            // HIGH SCORE CHECK
             if(score > highScore) {
                 highScore = score;
                 localStorage.setItem('powa-high-score', highScore);
@@ -836,9 +808,14 @@
             }
             gameState = 'DIE_ANIM';
             
-            // UPDATE DEATH MODAL TEXT
             deathScoreDisplay.innerText = `SCORE: ${score}`;
             deathBestDisplay.innerText = `BEST: ${highScore}`;
+
+            // Re-enable input for next time
+            document.getElementById('username-input').disabled = false;
+            document.getElementById('submit-score-btn').disabled = false;
+            document.getElementById('submit-score-btn').innerText = "SUBMIT SCORE";
+            document.getElementById('submit-score-btn').style.background = "linear-gradient(180deg, #00aaff, #0055aa)";
 
             bgFail.style.display = 'block';
             setTimeout(() => { bgFail.style.opacity = '1'; }, 10);
@@ -847,8 +824,6 @@
 
         function winGame() {
             gameState = 'WIN_PAUSE'; 
-            
-            // SAVE UNLOCKED STATE
             localStorage.setItem('powa-unlocked', 'true');
             isUnlocked = true;
 
@@ -870,16 +845,12 @@
             bgWin.style.opacity = '0';
             setTimeout(() => { bgWin.style.display = 'none'; }, 500);
 
-            // KEEP SCORE - DO NOT RESET
-            // We resume exactly where we left off
-            
             // UI SWITCH: Hide Progress, Show Score
             progressContainer.style.display = 'none';
             scoreCounter.style.display = 'block';
             scoreCounter.innerText = score;
 
-            // Force a small jump so player doesn't fall immediately
-            player.velocity = -JUMP; 
+            player.velocity = -JUMP; // Small Jump
 
             gameState = 'PLAY';
             MUSIC.resume();
@@ -895,15 +866,12 @@
             score = 0; frames = 0;
             currentBiome = 0; 
             
-            // SMART RESET LOGIC
             if (isUnlocked) {
-                // If previously unlocked, stay in infinite mode
                 infiniteMode = true;
                 progressContainer.style.display = 'none';
                 scoreCounter.style.display = 'block';
                 scoreCounter.innerText = "0";
             } else {
-                // If not unlocked, go back to standard mode
                 infiniteMode = false;
                 progressContainer.style.display = 'flex';
                 scoreCounter.style.display = 'none';
@@ -914,7 +882,7 @@
             wrapper.style.boxShadow = "0 0 60px rgba(0,255,255,0.3)";
             
             player.y = height/2; player.velocity = 0; player.rotation = 0;
-            player.hasShield = false; // Reset shield
+            player.hasShield = false; 
             
             obstacles.list = []; trail = []; shockwaves = []; floatTexts = []; items = [];
             
@@ -947,21 +915,17 @@
             floatTexts = floatTexts.filter(f => { f.y+=f.vy; f.life-=0.02; return f.life>0; });
             trail.forEach(t => t.alpha -= 0.08);
 
-            // ITEM LOGIC
             items = items.filter(item => {
                 item.x -= SPEED;
-                // Collision with player
                 let dx = item.x - player.x;
                 let dy = item.y - player.y;
                 let dist = Math.sqrt(dx*dx + dy*dy);
-                
                 if(dist < 40 && !item.taken) {
                    item.taken = true;
                    player.hasShield = true;
                    SFX.shieldUp();
                    if(!PERF_MODE) floatTexts.push({text: "SHIELD!", x: player.x, y: player.y-40, life: 1.0, vy: -2});
                 }
-                
                 return item.x > -50 && !item.taken;
             });
 
@@ -997,7 +961,6 @@
             ctx.font = "900 24px 'Russo One'"; ctx.textAlign = "center";
             for(let f of floatTexts) { ctx.save(); ctx.fillStyle = "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.shadowBlur = 10; ctx.shadowColor = '#0ff'; ctx.globalAlpha = f.life; ctx.strokeText(f.text, f.x, f.y); ctx.fillText(f.text, f.x, f.y); ctx.restore(); }
             
-            // DRAW ITEMS
             for(let item of items) {
                 ctx.save();
                 ctx.shadowBlur = 15; ctx.shadowColor = '#0ff';
@@ -1006,7 +969,6 @@
                 ctx.beginPath();
                 ctx.arc(item.x, item.y, 15, 0, Math.PI*2);
                 ctx.stroke();
-                // Inner text
                 ctx.fillStyle = "#fff"; ctx.font = "16px monospace";
                 ctx.fillText("S", item.x, item.y+5);
                 ctx.restore();
@@ -1043,10 +1005,8 @@
         window.addEventListener('mousedown', handleInput);
         window.addEventListener('touchstart', handleInput, {passive: false});
 
-        initGalaxy(); initParticles(); resetLevel(); requestAnimationFrame(loop);
-
         // --------------------------------------------------------
-        // FIREBASE DATABASE LOGIC (COMPAT VERSION)
+        // FIREBASE DATABASE LOGIC (REAL-TIME FIX)
         // --------------------------------------------------------
 
         // !!! PASTE YOUR FIREBASE CONFIG HERE !!!
@@ -1059,28 +1019,24 @@
             appId: "1:522344119710:web:3bd572ef6580abd4c76a8f"
         };
 
-       // Initialize Firebase
+        // Initialize Firebase safely
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
 
-        // 1. Submit Score Function (WRITING)
+        // 1. Submit Score
         window.submitScore = function() {
             const nameInput = document.getElementById('username-input');
             const submitBtn = document.getElementById('submit-score-btn');
             
             const name = nameInput.value.toUpperCase().trim() || "ANONYMOUS";
             
-            if(score === 0) { 
-                alert("Play the game first!"); 
-                return; 
-            }
+            if(score === 0) { alert("Play the game first!"); return; }
             
             submitBtn.innerText = "SENDING...";
             submitBtn.disabled = true;
 
-            // Send to Database
             db.collection("leaderboard").add({
                 name: name,
                 score: score,
@@ -1089,12 +1045,8 @@
             .then(() => {
                 submitBtn.innerText = "SENT!";
                 submitBtn.style.background = "#333";
-                
-                // CRITICAL CHANGE: We DO NOT call fetchLeaderboard() here anymore.
-                // The onSnapshot listener below will see this new data and update automatically.
-                
-                // Disable input so they don't spam
                 nameInput.disabled = true;
+                // No fetchLeaderboard call needed here, onSnapshot handles it
             })
             .catch((error) => {
                 console.error("Error adding score: ", error);
@@ -1103,22 +1055,18 @@
             });
         };
 
-        // 2. Real-Time Listener (READING)
-        // This runs immediately and stays open to catch any changes
+        // 2. Real-Time Listener
         db.collection("leaderboard")
             .orderBy("score", "desc")
             .limit(10)
             .onSnapshot((querySnapshot) => {
-                // This code runs AUTOMATICALLY every time the database changes
                 const listDiv = document.getElementById('leaderboard-list');
                 let html = "";
                 let rank = 1;
                 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    // Basic HTML sanitation to prevent weird text
                     const safeName = data.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                    
                     html += `
                     <div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding:4px 0;">
                         <span><span style="color:#666">${rank}.</span> ${safeName}</span>
@@ -1132,16 +1080,8 @@
             }, (error) => {
                 console.error("Error getting real-time updates: ", error);
             });
-        }
 
-        // Load leaderboard automatically when game starts
-        fetchLeaderboard();
+        initGalaxy(); initParticles(); resetLevel(); requestAnimationFrame(loop);
     </script>
 </body>
 </html>
-
-
-
-
-
-
