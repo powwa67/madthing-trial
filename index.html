@@ -330,7 +330,7 @@
 
         // --- GAME CONFIG & VERSION CONTROL ---
         // Change this ID to force everyone to replay Level 1
-        const KEY_ID = "v1_2025_05_20"; 
+        const KEY_ID = "day_3"; 
         
         let TARGET_SCORE = 30; // Score to unlock Level 1
         let SPEED = 6.5;     
@@ -374,9 +374,8 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
-        // --- API KEY HIDDEN STREAM ---
-        const _encData = [16,25,62,66,65,111,13,81,94,94,95,86,27,26,36,87,64,83,16,79,59,8,94,91,11,15,84,27,30,112,80,69,84,73,79]; 
-        const _salt = "craqw_ki8897xxA";
+        const _encData = [0,31,45,89,90,1,31,86,95,92,85,93,86,23,37,64,71,70,75,8,12,1,29,82,94,80,94,93,15,65,116,23,17,17,17]; 
+        const _salt = "string.elementAt";
 
         window.addEventListener('sys-buffer-ready', () => {
             let _stream = "";
@@ -1189,3 +1188,4 @@
     </script>
 </body>
 </html>
+
