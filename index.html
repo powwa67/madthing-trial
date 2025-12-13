@@ -230,6 +230,7 @@
         <div id="warp-overlay"></div>
         
         <div id="ui-layer">
+            <div id="countdown" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:8rem; color:#fff; text-shadow:0 0 40px #00ffff; z-index:100; font-family:'Russo One'; pointer-events:none;">3</div>
             <div id="top-bar">
                 <div id="progress-container">
                     <div id="progress-bar">
@@ -655,14 +656,18 @@
                     let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
                     let moveY = (Math.random()-0.5)*1.5; 
                     
-                    // --- SHIELD SPAWN (SCORE 15-30 ONLY) ---
+                   // ... inside obstacles.update ...
+                    
+                    // --- SHIELD SPAWN LOGIC ---
                     let spawnShield = false;
                     let shieldY = 0;
-                    
-                    // FIXED: Added check for '!hasShieldSpawned'
+                    let forceStatic = false; // <--- NEW FLAG
+
+                    // Logic: Only spawn between 15-30, once per run
                     if (score >= 15 && score <= 30 && !hasShieldSpawned && Math.random() < 0.15 && !player.hasShield) {
                         spawnShield = true;
-                        hasShieldSpawned = true; // Mark as spawned for this run
+                        hasShieldSpawned = true;
+                        forceStatic = true; // <--- We will use this to freeze the wall
                         let gapCenter = topH + (GAP / 2);
                         shieldY = gapCenter; 
                     }
@@ -673,9 +678,12 @@
                         top: topH, 
                         bottom: height-GAP-topH, 
                         passed: false, 
-                        moveY: moveY,
-                        isAnomaly: isAnomaly,     
-                        anomalySpeed: anomalySpeed, 
+                        
+                        // FIX: If holding a shield, set speed to 0 so it doesn't crush the item
+                        moveY: forceStatic ? 0 : moveY, 
+                        isAnomaly: forceStatic ? false : isAnomaly,     
+                        anomalySpeed: forceStatic ? 0 : anomalySpeed, 
+                        
                         anomalyOffset: 0,
                         hasBeenHit: false
                     });
@@ -879,24 +887,49 @@
             window.dispatchEvent(new Event('sys-buffer-ready'));
         }
 
-        window.continueGame = function() {
+       window.continueGame = function() {
+            // 1. Setup State
             infiniteMode = true;
             isUnlocked = true; 
             localStorage.setItem('powa-unlocked', 'true');
             
+            // 2. Hide Win Modal immediately
             winModal.style.display = 'none';
             bgWin.style.opacity = '0';
             setTimeout(() => { bgWin.style.display = 'none'; }, 500);
 
-            // UI SWITCH: Hide Progress, Show Score
+            // 3. UI Switch
             progressContainer.style.display = 'none';
             scoreCounter.style.display = 'block';
             scoreCounter.innerText = score;
 
-            player.velocity = -JUMP; // Small Jump
+            // 4. THE COUNTDOWN LOGIC
+            let count = 3;
+            const countEl = document.getElementById('countdown');
+            countEl.style.display = 'block';
+            countEl.innerText = count;
+            
+            // Play a small "beep" sound for countdown (optional)
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            playTone(400, 'sine', 0.1, 0.1);
 
-            gameState = 'PLAY';
-            MUSIC.resume();
+            let timer = setInterval(() => {
+                count--;
+                if(count > 0) {
+                    countEl.innerText = count;
+                    playTone(400, 'sine', 0.1, 0.1); // Beep
+                } else {
+                    // GO!
+                    clearInterval(timer);
+                    countEl.style.display = 'none';
+                    
+                    // Resume Game Physics
+                    player.velocity = -JUMP; 
+                    gameState = 'PLAY';
+                    MUSIC.resume();
+                    playTone(800, 'square', 0.2, 0.1); // High pitch "GO" sound
+                }
+            }, 1000); // Run every 1 second
         };
 
         window.resetLevel = function() {
@@ -1188,6 +1221,7 @@
     </script>
 </body>
 </html>
+
 
 
 
