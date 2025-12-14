@@ -697,7 +697,7 @@
                     if (infiniteMode && pipeSpawnCount % 30 === 0 && !player.hasShield) spawnType = 'SHIELD';
                     
                     // Clock condition (Only infinite mode)
-                    if (infiniteMode && pipeSpawnCount % 45 === 0 && !timeStopActive) spawnType = 'CLOCK';
+                   if (infiniteMode && pipeSpawnCount % 30 === 0 && !timeStopActive) spawnType = 'CLOCK';
 
                     let forceStatic = false;
                     if (spawnType) {
@@ -1233,6 +1233,7 @@
     </script>
 </body>
 </html>
+
 
 
 
