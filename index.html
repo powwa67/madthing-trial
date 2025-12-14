@@ -85,7 +85,7 @@
         }
 
         #main-menu {
-            position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
+            position: absolute; top: 48%; left: 50%; transform: translate(-50%, -50%);
             text-align: center; width: 100%; pointer-events: auto; z-index: 20;
         }
 
@@ -98,13 +98,14 @@
         .high-score-label {
             color: #bd00ff;
             font-size: 1.2rem;
-            margin-top: 10px;
+            margin-top: 5px; margin-bottom: 10px;
             text-shadow: 0 0 10px #bd00ff;
             letter-spacing: 1px;
         }
 
+        /* LEADERBOARD & TABS */
         #leaderboard {
-            margin: 15px auto; 
+            margin: 5px auto; 
             width: 320px; 
             height: 210px;
             background: rgba(0, 5, 10, 0.9); 
@@ -147,14 +148,18 @@
         #leaderboard-list::-webkit-scrollbar-thumb { background: #bd00ff; border-radius: 3px; }
         #leaderboard-list::-webkit-scrollbar-thumb:hover { background: #fff; }
         
-        #perf-btn {
+        /* MENU BUTTONS */
+        .menu-btn-container {
+            display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 15px;
+        }
+
+        #perf-btn, #skin-btn {
             background: rgba(0, 0, 0, 0.8);
             border: 2px solid #00ffff;
             color: #00ffff;
             font-family: 'Russo One', sans-serif;
             font-size: 1rem;
             padding: 10px 20px;
-            margin-top: 25px;
             cursor: pointer;
             border-radius: 8px;
             text-transform: uppercase;
@@ -162,11 +167,14 @@
             pointer-events: auto; 
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
             position: relative;
-            z-index: 30; 
+            z-index: 30; width: 280px;
         }
-        #perf-btn:hover { background: #00ffff; color: #000; }
+        #perf-btn:hover, #skin-btn:hover { background: #00ffff; color: #000; }
         #perf-btn.low-mode { border-color: #ff4444; color: #ff4444; box-shadow: none; }
         
+        #skin-btn { border-color: #bd00ff; color: #bd00ff; box-shadow: 0 0 15px rgba(189, 0, 255, 0.2); }
+        #skin-btn:hover { background: #bd00ff; color: #000; }
+
         .modal {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); z-index: 100; flex-direction: column;
@@ -265,28 +273,19 @@
                     </div>
                 </div>
 
-                <div id="key-warning" style="display:none; color:#ff4444; font-size:1rem; margin-top:10px; border: 2px dashed #ff4444; background:rgba(20,0,0,0.8); padding:8px; animation: blink 2s infinite; font-family:'Russo One', sans-serif;">
+                <div id="key-warning" style="display:none; color:#ff4444; font-size:0.9rem; margin-top:5px; border: 2px dashed #ff4444; background:rgba(20,0,0,0.8); padding:5px; animation: blink 2s infinite; font-family:'Russo One', sans-serif;">
                     ⚠ DAILY KEY EXHAUSTED ⚠<br>
                     <span style="font-size:0.7rem; color:#fff;">CHECK BACK TOMORROW</span>
                 </div>
-                <div style="color:#ffff00; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
-                <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
 
-<button id="skin-btn" onclick="cycleSkin(event)" style="
-    background: rgba(0, 0, 0, 0.8);
-    border: 2px solid #bd00ff;
-    color: #bd00ff;
-    font-family: 'Russo One', sans-serif;
-    font-size: 1rem;
-    padding: 10px 20px;
-    margin-top: 10px;
-    cursor: pointer;
-    border-radius: 8px;
-    text-transform: uppercase;
-    box-shadow: 0 0 15px rgba(189, 0, 255, 0.2);
-    width: 100%;
-">SKIN: DEFAULT</button>
+                <div style="color:#ffff00; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
+                
+                <div class="menu-btn-container">
+                    <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
+                    <button id="skin-btn" onclick="cycleSkin(event)">SKIN: DEFAULT</button>
+                </div>
             </div>
+
         </div>
 
         <div id="death-modal" class="modal">
@@ -363,12 +362,8 @@
         resize();
 
         // --- GAME CONFIG & VERSION CONTROL ---
-        // Change this ID to force everyone to replay Level 1 AND RESET DAILY RANKING
         const KEY_ID = "day_5"; 
-        
-        // --- KEY WARNING SWITCH ---
-        // Set this to "ON" to show the warning, "OFF" to hide it.
-        const KEY_WARNING_MODE = "ON"; 
+        const KEY_WARNING_MODE = "ON"; // CHANGE TO "ON" TO SHOW WARNING
 
         let TARGET_SCORE = 50; 
         let SPEED = 6.5;     
@@ -396,7 +391,7 @@
         
         menuHighScore.innerText = `BEST: ${highScore}`;
 
-        // --- SKIN CONFIGURATION ---
+        // --- SKINS CONFIG ---
         const SKINS = [
             { name: "DEFAULT", req: 0, body: "#000", border: "#fff", eye: "#0ff", shadow: "#0ff" },
             { name: "CRIMSON", req: 100, body: "#200", border: "#f00", eye: "#ff0000", shadow: "#f00" },
@@ -404,10 +399,7 @@
             { name: "GOLDEN",  req: 500, body: "#220", border: "#ffd700", eye: "#ffffff", shadow: "#ffd700" }
         ];
         
-        // Load saved skin or default to 0
         let currentSkinIdx = parseInt(localStorage.getItem('powa-skin-idx')) || 0;
-
-        // Ensure we don't load a skin we don't qualify for (if save data was reset)
         if(highScore < SKINS[currentSkinIdx].req) currentSkinIdx = 0;
 
         // --- BIOMES DEFINITION ---
@@ -551,28 +543,23 @@
             }
         };
 
+        // --- SKIN LOGIC ---
         window.cycleSkin = function(e) {
             e.stopPropagation();
             const btn = document.getElementById('skin-btn');
-            
-            // Calculate next index
             let nextIdx = (currentSkinIdx + 1) % SKINS.length;
             
-            // Check requirement
             if (highScore >= SKINS[nextIdx].req) {
                 currentSkinIdx = nextIdx;
                 localStorage.setItem('powa-skin-idx', currentSkinIdx);
                 updateSkinBtn();
-                // Play a sound if you want
                 playTone(600, 'sine', 0.1); 
             } else {
-                // LOCK FEEDBACK
-                btn.innerText = `LOCKED (SCORE ${SKINS[nextIdx].req})`;
+                btn.innerText = `LOCKED (${SKINS[nextIdx].req})`;
                 btn.style.borderColor = "#555";
                 btn.style.color = "#555";
                 btn.style.boxShadow = "none";
-                playTone(150, 'sawtooth', 0.2); // Error buzz
-                
+                playTone(150, 'sawtooth', 0.2);
                 setTimeout(() => { updateSkinBtn(); }, 1000);
             }
         };
@@ -583,12 +570,9 @@
             btn.innerText = `SKIN: ${skin.name}`;
             btn.style.borderColor = skin.border;
             btn.style.color = skin.border;
-            btn.style.boxShadow = `0 0 15px ${skin.shadow}40`; // 40 is hex opacity
+            btn.style.boxShadow = `0 0 15px ${skin.shadow}40`;
         }
-        
-        // Call this once on startup to set initial button text
         setTimeout(updateSkinBtn, 100);
-        }
 
         function triggerShake() {
             if(PERF_MODE) return;
@@ -680,7 +664,7 @@
             for(let s of shootingStars) { ctx.globalAlpha=s.life; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(s.x-s.vx*0.5,s.y-s.vy*0.5); ctx.stroke(); } ctx.globalAlpha=1;
         }
 
-        // --- GAME OBJECTS ---
+        // --- GAME OBJECTS (WITH SKIN SUPPORT) ---
         const player = {
             x: 60, y: 200, size: 32, velocity: 0, rotation: 0,
             hasShield: false, 
@@ -689,7 +673,6 @@
                 this.velocity += GRAVITY;
                 this.y += this.velocity;
                 if(frames % 2 === 0 && gameState === 'PLAY') {
-                    // Trail inherits skin color
                     let s = SKINS[currentSkinIdx];
                     trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0, color: s.shadow});
                     if(trail.length > 12) trail.shift();
@@ -697,12 +680,10 @@
                 if(gameState === 'PLAY') this.rotation += 4 + (SPEED * 0.5); 
             },
             draw: function() {
-                const s = SKINS[currentSkinIdx]; // GET CURRENT SKIN
+                const s = SKINS[currentSkinIdx]; 
 
-                // Draw Trail
                 for(let t of trail) {
                     ctx.save(); ctx.translate(t.x+this.size/2, t.y+this.size/2); ctx.rotate(t.rot*Math.PI/180);
-                    // Use skin shadow color for trail
                     ctx.fillStyle = t.color ? t.color : s.shadow; 
                     ctx.globalAlpha = t.alpha * 0.5;
                     ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); 
@@ -710,27 +691,24 @@
                 }
                 ctx.globalAlpha = 1;
 
-                // Draw Player
                 ctx.save(); ctx.translate(this.x+this.size/2, this.y+this.size/2); ctx.rotate(this.rotation*Math.PI/180);
                 
                 if(!PERF_MODE) { 
                     ctx.shadowBlur=20; 
-                    ctx.shadowColor=s.shadow; // Skin Shadow
+                    ctx.shadowColor=s.shadow; 
                 }
                 
-                ctx.fillStyle=s.body; // Skin Body
+                ctx.fillStyle=s.body; 
                 ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
                 
                 ctx.lineWidth=3; 
-                ctx.strokeStyle=s.border; // Skin Border
+                ctx.strokeStyle=s.border; 
                 ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
                 
-                // Eye
                 let eyeOffset=Math.sin(frames*0.2)*2; 
-                ctx.fillStyle=s.eye; // Skin Eye
+                ctx.fillStyle=s.eye; 
                 ctx.fillRect(-6+eyeOffset, -6-eyeOffset, 12, 12); 
                 
-                // Shield
                 if(this.hasShield) {
                     ctx.beginPath();
                     ctx.lineWidth = 3;
@@ -1154,6 +1132,7 @@
         function handleInput(e) {
             if(e.type === 'keydown' && e.code === 'Space') e.preventDefault();
             if(e.target.id === 'perf-btn') return;
+            if(e.target.id === 'skin-btn') return;
             if(e.target.closest('#leaderboard')) return;
 
             if(gameState === 'WIN_PAUSE') return;
@@ -1284,5 +1263,3 @@
     </script>
 </body>
 </html>
-
-
