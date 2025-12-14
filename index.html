@@ -103,7 +103,6 @@
             letter-spacing: 1px;
         }
 
-        /* LEADERBOARD & TABS */
         #leaderboard {
             margin: 5px auto; 
             width: 320px; 
@@ -142,18 +141,15 @@
             flex-grow: 1; 
             text-align: left;
         }
-
         #leaderboard-list::-webkit-scrollbar { width: 6px; }
         #leaderboard-list::-webkit-scrollbar-track { background: #000; }
         #leaderboard-list::-webkit-scrollbar-thumb { background: #bd00ff; border-radius: 3px; }
-        #leaderboard-list::-webkit-scrollbar-thumb:hover { background: #fff; }
-        
-        /* MENU BUTTONS */
+
         .menu-btn-container {
-            display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 15px;
+            display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 20px;
         }
 
-        #perf-btn, #skin-btn {
+        #perf-btn {
             background: rgba(0, 0, 0, 0.8);
             border: 2px solid #00ffff;
             color: #00ffff;
@@ -166,14 +162,64 @@
             transition: all 0.2s;
             pointer-events: auto; 
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
-            position: relative;
-            z-index: 30; width: 280px;
+            width: 280px;
         }
-        #perf-btn:hover, #skin-btn:hover { background: #00ffff; color: #000; }
+        #perf-btn:hover { background: #00ffff; color: #000; }
         #perf-btn.low-mode { border-color: #ff4444; color: #ff4444; box-shadow: none; }
+
+        /* --- SKIN SELECTOR STYLES --- */
+        #skin-toggle-btn {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.8);
+            border: 2px solid #bd00ff;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(189, 0, 255, 0.4);
+            display: flex; justify-content: center; align-items: center;
+            transition: transform 0.2s;
+            pointer-events: auto;
+        }
+        #skin-toggle-btn:hover { transform: scale(1.1); background: #bd00ff; }
+
+        #skin-modal {
+            background: rgba(0,0,0,0.95);
+            display: none; /* Flex when active */
+            z-index: 200;
+        }
         
-        #skin-btn { border-color: #bd00ff; color: #bd00ff; box-shadow: 0 0 15px rgba(189, 0, 255, 0.2); }
-        #skin-btn:hover { background: #bd00ff; color: #000; }
+        #skin-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 340px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .skin-card {
+            background: #111;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .skin-card.locked { opacity: 0.6; cursor: not-allowed; border-style: dashed; }
+        .skin-card.active { border-color: #00ffff; box-shadow: 0 0 15px rgba(0,255,255,0.3); background: #002222; }
+        
+        .skin-preview {
+            width: 40px; height: 40px; margin: 0 auto 10px auto;
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
 
         .modal {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -236,6 +282,13 @@
             opacity: 0; pointer-events: none; transition: opacity 0.2s;
             z-index: 40; mix-blend-mode: overlay;
         }
+        
+        .close-btn {
+            background: transparent; border: 1px solid #555; color: #aaa;
+            padding: 10px 20px; border-radius: 6px; cursor: pointer;
+            margin-top: 20px; font-family: 'Russo One';
+        }
+        .close-btn:hover { border-color: #fff; color: #fff; }
     </style>
 </head>
 <body>
@@ -282,10 +335,16 @@
                 
                 <div class="menu-btn-container">
                     <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
-                    <button id="skin-btn" onclick="cycleSkin(event)">SKIN: DEFAULT</button>
+                    <button id="skin-toggle-btn" onclick="openSkinMenu(event)">👕</button>
                 </div>
             </div>
+        </div>
 
+        <div id="skin-modal" class="modal">
+            <h2 style="color:#fff; text-shadow:0 0 10px #bd00ff; margin-top:0;">SELECT SKIN</h2>
+            <div id="skin-grid">
+                </div>
+            <button class="close-btn" onclick="closeSkinMenu()">CLOSE</button>
         </div>
 
         <div id="death-modal" class="modal">
@@ -332,6 +391,7 @@
         
         const deathModal = document.getElementById('death-modal');
         const winModal = document.getElementById('win-modal');
+        const skinModal = document.getElementById('skin-modal');
         const menuHighScore = document.getElementById('menu-high-score');
         const deathScoreDisplay = document.getElementById('death-score-display');
         const deathBestDisplay = document.getElementById('death-best-display');
@@ -363,7 +423,7 @@
 
         // --- GAME CONFIG & VERSION CONTROL ---
         const KEY_ID = "day_5"; 
-        const KEY_WARNING_MODE = "ON"; // CHANGE TO "ON" TO SHOW WARNING
+        const KEY_WARNING_MODE = "ON"; 
 
         let TARGET_SCORE = 50; 
         let SPEED = 6.5;     
@@ -372,7 +432,6 @@
         let GAP = 170; 
         let PERF_MODE = false;
 
-        // --- STORAGE & PERSISTENCE CHECK ---
         let highScore = localStorage.getItem('powa-high-score') || 0;
         let storedKeyId = localStorage.getItem('powa-key-id');
         let storedUnlock = localStorage.getItem('powa-unlocked');
@@ -543,36 +602,47 @@
             }
         };
 
-        // --- SKIN LOGIC ---
-        window.cycleSkin = function(e) {
+        // --- NEW SKIN SELECTOR LOGIC ---
+        window.openSkinMenu = function(e) {
             e.stopPropagation();
-            const btn = document.getElementById('skin-btn');
-            let nextIdx = (currentSkinIdx + 1) % SKINS.length;
+            const grid = document.getElementById('skin-grid');
+            grid.innerHTML = '';
             
-            if (highScore >= SKINS[nextIdx].req) {
-                currentSkinIdx = nextIdx;
-                localStorage.setItem('powa-skin-idx', currentSkinIdx);
-                updateSkinBtn();
-                playTone(600, 'sine', 0.1); 
-            } else {
-                btn.innerText = `LOCKED (${SKINS[nextIdx].req})`;
-                btn.style.borderColor = "#555";
-                btn.style.color = "#555";
-                btn.style.boxShadow = "none";
-                playTone(150, 'sawtooth', 0.2);
-                setTimeout(() => { updateSkinBtn(); }, 1000);
-            }
+            SKINS.forEach((skin, idx) => {
+                const locked = highScore < skin.req;
+                const active = idx === currentSkinIdx;
+                
+                let el = document.createElement('div');
+                el.className = `skin-card ${locked ? 'locked' : ''} ${active ? 'active' : ''}`;
+                
+                // Content
+                let preview = `<div class="skin-preview" style="background:${skin.body}; border-color:${skin.border}; box-shadow: 0 0 10px ${skin.shadow}"></div>`;
+                let icon = locked ? `<div style="font-size:2rem; margin-bottom:5px;">🔒</div>` : preview;
+                let text = locked ? `REQ: ${skin.req}` : skin.name;
+                
+                el.innerHTML = `${icon}<div style="color:#fff; font-size:0.8rem;">${text}</div>`;
+                
+                el.onclick = function() {
+                    if(locked) {
+                        playTone(150, 'sawtooth', 0.2); // Denied
+                        el.style.borderColor = "#f00";
+                        setTimeout(()=> el.style.borderColor = "#333", 200);
+                    } else {
+                        currentSkinIdx = idx;
+                        localStorage.setItem('powa-skin-idx', currentSkinIdx);
+                        playTone(600, 'sine', 0.1); // Select
+                        openSkinMenu(e); // Refresh
+                    }
+                };
+                grid.appendChild(el);
+            });
+            
+            skinModal.style.display = 'flex';
         };
 
-        function updateSkinBtn() {
-            const btn = document.getElementById('skin-btn');
-            const skin = SKINS[currentSkinIdx];
-            btn.innerText = `SKIN: ${skin.name}`;
-            btn.style.borderColor = skin.border;
-            btn.style.color = skin.border;
-            btn.style.boxShadow = `0 0 15px ${skin.shadow}40`;
-        }
-        setTimeout(updateSkinBtn, 100);
+        window.closeSkinMenu = function() {
+            skinModal.style.display = 'none';
+        };
 
         function triggerShake() {
             if(PERF_MODE) return;
@@ -664,7 +734,7 @@
             for(let s of shootingStars) { ctx.globalAlpha=s.life; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(s.x-s.vx*0.5,s.y-s.vy*0.5); ctx.stroke(); } ctx.globalAlpha=1;
         }
 
-        // --- GAME OBJECTS (WITH SKIN SUPPORT) ---
+        // --- GAME OBJECTS (WITH FIXED TRAIL) ---
         const player = {
             x: 60, y: 200, size: 32, velocity: 0, rotation: 0,
             hasShield: false, 
@@ -675,7 +745,8 @@
                 if(frames % 2 === 0 && gameState === 'PLAY') {
                     let s = SKINS[currentSkinIdx];
                     trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0, color: s.shadow});
-                    if(trail.length > 12) trail.shift();
+                    // REDUCED TRAIL LENGTH TO 6 (Was 12)
+                    if(trail.length > 6) trail.shift();
                 }
                 if(gameState === 'PLAY') this.rotation += 4 + (SPEED * 0.5); 
             },
@@ -998,6 +1069,7 @@
             deathModal.style.display = 'none';
             bgFail.style.opacity = '0';
             bgWin.style.opacity = '0';
+            skinModal.style.display = 'none';
             setTimeout(() => { bgFail.style.display = 'none'; bgWin.style.display = 'none'; }, 500);
 
             gameState = 'START';
@@ -1132,8 +1204,9 @@
         function handleInput(e) {
             if(e.type === 'keydown' && e.code === 'Space') e.preventDefault();
             if(e.target.id === 'perf-btn') return;
-            if(e.target.id === 'skin-btn') return;
+            if(e.target.id === 'skin-toggle-btn') return;
             if(e.target.closest('#leaderboard')) return;
+            if(e.target.closest('#skin-modal')) return;
 
             if(gameState === 'WIN_PAUSE') return;
             if(gameState === 'START') startGame();
@@ -1255,7 +1328,6 @@
         initGalaxy(); initParticles(); resetLevel(); requestAnimationFrame(loop);
         switchTab('daily');
 
-        // CHECK WARNING MODE
         if (KEY_WARNING_MODE === "ON") {
             const warnBox = document.getElementById('key-warning');
             if(warnBox) warnBox.style.display = 'block';
