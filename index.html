@@ -212,13 +212,22 @@
             overflow: hidden;
         }
         
-        .skin-card.locked { opacity: 0.6; cursor: not-allowed; border-style: dashed; }
+        /* LOCKED STATE: Lower Opacity, Dashed Border */
+        .skin-card.locked { opacity: 0.7; cursor: not-allowed; border-style: dashed; border-color: #555; }
         .skin-card.active { border-color: #00ffff; box-shadow: 0 0 15px rgba(0,255,255,0.3); background: #002222; }
         
         .skin-preview {
             width: 40px; height: 40px; margin: 0 auto 10px auto;
             border: 2px solid #fff;
             box-shadow: 0 0 10px rgba(255,255,255,0.5);
+            position: relative;
+        }
+
+        /* LOCK OVERLAY */
+        .lock-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 1.5rem; text-shadow: 0 0 5px #000, 0 0 10px #000;
+            pointer-events: none;
         }
 
         .modal {
@@ -602,7 +611,7 @@
             }
         };
 
-        // --- NEW SKIN SELECTOR LOGIC ---
+        // --- NEW SKIN SELECTOR LOGIC (WITH TEASE) ---
         window.openSkinMenu = function(e) {
             e.stopPropagation();
             const grid = document.getElementById('skin-grid');
@@ -615,18 +624,24 @@
                 let el = document.createElement('div');
                 el.className = `skin-card ${locked ? 'locked' : ''} ${active ? 'active' : ''}`;
                 
-                // Content
-                let preview = `<div class="skin-preview" style="background:${skin.body}; border-color:${skin.border}; box-shadow: 0 0 10px ${skin.shadow}"></div>`;
-                let icon = locked ? `<div style="font-size:2rem; margin-bottom:5px;">🔒</div>` : preview;
-                let text = locked ? `REQ: ${skin.req}` : skin.name;
+                // 1. Always show the colors (Tease)
+                let preview = `<div class="skin-preview" style="background:${skin.body}; border-color:${skin.border}; box-shadow: 0 0 10px ${skin.shadow}">`;
                 
-                el.innerHTML = `${icon}<div style="color:#fff; font-size:0.8rem;">${text}</div>`;
+                // 2. If locked, overlay the lock icon
+                if(locked) {
+                    preview += `<div class="lock-overlay">🔒</div>`;
+                }
+                preview += `</div>`;
+                
+                let text = locked ? `<span style="color:#777;">REQ: ${skin.req}</span>` : skin.name;
+                
+                el.innerHTML = `${preview}<div style="color:#fff; font-size:0.8rem;">${text}</div>`;
                 
                 el.onclick = function() {
                     if(locked) {
                         playTone(150, 'sawtooth', 0.2); // Denied
                         el.style.borderColor = "#f00";
-                        setTimeout(()=> el.style.borderColor = "#333", 200);
+                        setTimeout(()=> el.style.borderColor = "#555", 200);
                     } else {
                         currentSkinIdx = idx;
                         localStorage.setItem('powa-skin-idx', currentSkinIdx);
