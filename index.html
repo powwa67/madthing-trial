@@ -702,16 +702,26 @@
                     let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
                     let moveY = (Math.random()-0.5)*1.5; 
                     
+                    // --- NEW SPAWN LOGIC (FIXED) ---
                     let spawnType = null;
 
-                    // 1. SHIELD SPAWN
+                    // 1. SHIELD (Normal Mode - Score 15 to 30)
                     if (!infiniteMode && score >= 15 && score <= 30 && !hasShieldSpawned && Math.random() < 0.15 && !player.hasShield) {
                         spawnType = 'SHIELD'; hasShieldSpawned = true;
                     }
-                    if (infiniteMode && pipeSpawnCount % 30 === 0 && !player.hasShield) spawnType = 'SHIELD';
                     
-                    // 2. TIME STOP SPAWN (Every 30 in Infinite Mode)
-                    if (infiniteMode && pipeSpawnCount % 30 === 0 && !timeStopActive) spawnType = 'CLOCK';
+                    // 2. SHIELD (Infinite Mode - Every 25 Pillars)
+                    // Changed from 30 to 25 so it doesn't clash with the Clock
+                    if (infiniteMode && pipeSpawnCount % 25 === 0 && !player.hasShield) {
+                        spawnType = 'SHIELD';
+                    }
+                    
+                    // 3. CLOCK (Infinite Mode - Every 30 Pillars)
+                    // Note: If both 25 and 30 trigger at the same time (e.g. at 150), 
+                    // this 'if' will overwrite the Shield, which is fine (Clock is rarer/cooler).
+                    if (infiniteMode && pipeSpawnCount % 30 === 0 && !timeStopActive) {
+                        spawnType = 'CLOCK';
+                    }
 
                     let forceStatic = false;
                     if (spawnType) {
@@ -1270,3 +1280,4 @@
     </script>
 </body>
 </html>
+
