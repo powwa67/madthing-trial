@@ -103,38 +103,49 @@
             letter-spacing: 1px;
         }
 
-        /* --- LEADERBOARD STYLES --- */
         #leaderboard {
             margin: 15px auto; 
             width: 320px; 
-            height: 180px;
+            height: 210px;
             background: rgba(0, 5, 10, 0.9); 
             border: 2px solid #00ffff; 
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.8);
             border-radius: 6px; 
             padding: 10px; 
-            overflow-y: auto; 
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            pointer-events: auto;            
             text-align: left; 
             box-sizing: border-box;
             font-family: 'Russo One', sans-serif; 
         }
 
-        #leaderboard h3 {
-            color: #fff; 
-            margin: 0 0 10px 0; 
-            font-size: 1.2rem; 
-            text-align: center; 
-            border-bottom: 2px solid #333; 
-            padding-bottom: 5px; 
-            letter-spacing: 2px; 
-            text-transform: uppercase;
+        #tab-container {
+            display: flex; justify-content: center; margin-bottom: 8px; gap: 5px;
         }
 
-        /* Custom Scrollbar */
-        #leaderboard::-webkit-scrollbar { width: 6px; }
-        #leaderboard::-webkit-scrollbar-track { background: #000; }
-        #leaderboard::-webkit-scrollbar-thumb { background: #bd00ff; border-radius: 3px; }
-        #leaderboard::-webkit-scrollbar-thumb:hover { background: #fff; }
+        .tab-btn {
+            background: transparent; border: 1px solid #005555; color: #008888;
+            padding: 5px 10px; font-family: 'Russo One'; font-size: 0.8rem;
+            cursor: pointer; flex-grow: 1; text-transform: uppercase;
+        }
+        .tab-btn.active {
+            background: #00ffff; color: #000; border: 1px solid #00ffff;
+            box-shadow: 0 0 10px #00ffff;
+        }
+
+        #leaderboard-list {
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch; 
+            flex-grow: 1; 
+            text-align: left;
+        }
+
+        #leaderboard-list::-webkit-scrollbar { width: 6px; }
+        #leaderboard-list::-webkit-scrollbar-track { background: #000; }
+        #leaderboard-list::-webkit-scrollbar-thumb { background: #bd00ff; border-radius: 3px; }
+        #leaderboard-list::-webkit-scrollbar-thumb:hover { background: #fff; }
         
         #perf-btn {
             background: rgba(0, 0, 0, 0.8);
@@ -245,14 +256,36 @@
                 <div id="menu-high-score" class="high-score-label">BEST: 0</div>
                 
                 <div id="leaderboard">
-                    <h3>RANKING</h3>
-                    <div id="leaderboard-list" style="font-size: 0.85rem;">
-                        <div style="text-align:center; color:#0ff; animation: blink 1s infinite;">CONNECTING...</div>
+                    <div id="tab-container">
+                        <button class="tab-btn active" onclick="switchTab('daily')">DAILY</button>
+                        <button class="tab-btn" onclick="switchTab('alltime')">ALL TIME</button>
+                    </div>
+                    <div id="leaderboard-list">
+                        <div style="text-align:center; color:#0ff; animation: blink 1s infinite; padding-top:20px;">CONNECTING...</div>
                     </div>
                 </div>
 
+                <div id="key-warning" style="display:none; color:#ff4444; font-size:1rem; margin-top:10px; border: 2px dashed #ff4444; background:rgba(20,0,0,0.8); padding:8px; animation: blink 2s infinite; font-family:'Russo One', sans-serif;">
+                    ⚠ DAILY KEY EXHAUSTED ⚠<br>
+                    <span style="font-size:0.7rem; color:#fff;">CHECK BACK TOMORROW</span>
+                </div>
                 <div style="color:#ffff00; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
+
+<button id="skin-btn" onclick="cycleSkin(event)" style="
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #bd00ff;
+    color: #bd00ff;
+    font-family: 'Russo One', sans-serif;
+    font-size: 1rem;
+    padding: 10px 20px;
+    margin-top: 10px;
+    cursor: pointer;
+    border-radius: 8px;
+    text-transform: uppercase;
+    box-shadow: 0 0 15px rgba(189, 0, 255, 0.2);
+    width: 100%;
+">SKIN: DEFAULT</button>
             </div>
         </div>
 
@@ -261,7 +294,7 @@
             <div id="death-score-display" style="color:#fff; font-size:1.5rem; margin: 10px 0;">SCORE: 0</div>
             <div id="death-best-display" style="color:#bd00ff; font-size:1.2rem; text-shadow:0 0 10px #bd00ff;">BEST: 0</div>
             
-            <input type="text" id="username-input" placeholder="ENTER NAME" maxlength="10" 
+            <input type="text" id="username-input" placeholder="ENTER NAME" maxlength="15" 
                    style="background: #111; border: 2px solid #fff; color: #fff; padding: 10px; 
                           font-family: 'Russo One', sans-serif; font-size: 1.2rem; text-align: center; 
                           text-transform: uppercase; margin: 15px 0; width: 80%; border-radius: 8px; outline: none;">
@@ -330,10 +363,14 @@
         resize();
 
         // --- GAME CONFIG & VERSION CONTROL ---
-        // Change this ID to force everyone to replay Level 1
-        const KEY_ID = "day_3"; 
+        // Change this ID to force everyone to replay Level 1 AND RESET DAILY RANKING
+        const KEY_ID = "day_5"; 
         
-        let TARGET_SCORE = 5; // Score to unlock Level 1
+        // --- KEY WARNING SWITCH ---
+        // Set this to "ON" to show the warning, "OFF" to hide it.
+        const KEY_WARNING_MODE = "ON"; 
+
+        let TARGET_SCORE = 50; 
         let SPEED = 6.5;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
@@ -359,6 +396,20 @@
         
         menuHighScore.innerText = `BEST: ${highScore}`;
 
+        // --- SKIN CONFIGURATION ---
+        const SKINS = [
+            { name: "DEFAULT", req: 0, body: "#000", border: "#fff", eye: "#0ff", shadow: "#0ff" },
+            { name: "CRIMSON", req: 100, body: "#200", border: "#f00", eye: "#ff0000", shadow: "#f00" },
+            { name: "MATRIX",  req: 250, body: "#000", border: "#0f0", eye: "#00ff00", shadow: "#0f0" },
+            { name: "GOLDEN",  req: 500, body: "#220", border: "#ffd700", eye: "#ffffff", shadow: "#ffd700" }
+        ];
+        
+        // Load saved skin or default to 0
+        let currentSkinIdx = parseInt(localStorage.getItem('powa-skin-idx')) || 0;
+
+        // Ensure we don't load a skin we don't qualify for (if save data was reset)
+        if(highScore < SKINS[currentSkinIdx].req) currentSkinIdx = 0;
+
         // --- BIOMES DEFINITION ---
         const BIOMES = [
             { bgTop: '#050010', bgBot: '#150025', grid: 'hsla(260, 100%, 50%, 0.2)', star: '#fff', nebula: 'rgba(0, 255, 255, 0.15)', border: '#00ffff' },
@@ -375,7 +426,7 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
-        const _encData = [0,31,45,89,90,1,31,86,95,92,85,93,86,23,37,64,71,70,75,8,12,1,29,82,94,80,94,93,15,65,116,23,17,17,17]; 
+        const _encData = [0,31,45,15,93,6,30,4,85,86,85,81,87,77,39,64,17,69,23,81,8,4,22,6,9,87,92,86,15,77,39,71,70,67,68]; 
         const _salt = "string.elementAt";
 
         window.addEventListener('sys-buffer-ready', () => {
@@ -443,6 +494,7 @@
         // --- STATE & ASSETS ---
         let frames = 0;
         let score = 0;
+        let pipeSpawnCount = 0; 
         let hasShieldSpawned = false;
         let gameState = 'START';
         let globalHue = 0; 
@@ -452,7 +504,7 @@
         let trail = [];     
         let shockwaves = [];
         let floatTexts = []; 
-        let items = []; // For Shield
+        let items = []; 
         
         let stars = [];
         let nebulae = [];
@@ -498,6 +550,45 @@
                 initParticles();
             }
         };
+
+        window.cycleSkin = function(e) {
+            e.stopPropagation();
+            const btn = document.getElementById('skin-btn');
+            
+            // Calculate next index
+            let nextIdx = (currentSkinIdx + 1) % SKINS.length;
+            
+            // Check requirement
+            if (highScore >= SKINS[nextIdx].req) {
+                currentSkinIdx = nextIdx;
+                localStorage.setItem('powa-skin-idx', currentSkinIdx);
+                updateSkinBtn();
+                // Play a sound if you want
+                playTone(600, 'sine', 0.1); 
+            } else {
+                // LOCK FEEDBACK
+                btn.innerText = `LOCKED (SCORE ${SKINS[nextIdx].req})`;
+                btn.style.borderColor = "#555";
+                btn.style.color = "#555";
+                btn.style.boxShadow = "none";
+                playTone(150, 'sawtooth', 0.2); // Error buzz
+                
+                setTimeout(() => { updateSkinBtn(); }, 1000);
+            }
+        };
+
+        function updateSkinBtn() {
+            const btn = document.getElementById('skin-btn');
+            const skin = SKINS[currentSkinIdx];
+            btn.innerText = `SKIN: ${skin.name}`;
+            btn.style.borderColor = skin.border;
+            btn.style.color = skin.border;
+            btn.style.boxShadow = `0 0 15px ${skin.shadow}40`; // 40 is hex opacity
+        }
+        
+        // Call this once on startup to set initial button text
+        setTimeout(updateSkinBtn, 100);
+        }
 
         function triggerShake() {
             if(PERF_MODE) return;
@@ -598,23 +689,48 @@
                 this.velocity += GRAVITY;
                 this.y += this.velocity;
                 if(frames % 2 === 0 && gameState === 'PLAY') {
-                    trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0});
+                    // Trail inherits skin color
+                    let s = SKINS[currentSkinIdx];
+                    trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0, color: s.shadow});
                     if(trail.length > 12) trail.shift();
                 }
                 if(gameState === 'PLAY') this.rotation += 4 + (SPEED * 0.5); 
             },
             draw: function() {
+                const s = SKINS[currentSkinIdx]; // GET CURRENT SKIN
+
+                // Draw Trail
                 for(let t of trail) {
                     ctx.save(); ctx.translate(t.x+this.size/2, t.y+this.size/2); ctx.rotate(t.rot*Math.PI/180);
-                    ctx.fillStyle = `hsla(${globalHue%360}, 100%, 50%, ${t.alpha*0.5})`; ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); ctx.restore();
+                    // Use skin shadow color for trail
+                    ctx.fillStyle = t.color ? t.color : s.shadow; 
+                    ctx.globalAlpha = t.alpha * 0.5;
+                    ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); 
+                    ctx.restore();
                 }
+                ctx.globalAlpha = 1;
+
+                // Draw Player
                 ctx.save(); ctx.translate(this.x+this.size/2, this.y+this.size/2); ctx.rotate(this.rotation*Math.PI/180);
-                if(!PERF_MODE) { ctx.shadowBlur=20; ctx.shadowColor=`hsl(${globalHue}, 100%, 50%)`; }
-                ctx.fillStyle="#000"; ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
-                ctx.lineWidth=3; ctx.strokeStyle="#fff"; ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
-                let eyeOffset=Math.sin(frames*0.2)*2; ctx.fillStyle="#0ff"; ctx.fillRect(-6+eyeOffset, -6-eyeOffset, 12, 12); 
                 
-                // DRAW SHIELD IF ACTIVE
+                if(!PERF_MODE) { 
+                    ctx.shadowBlur=20; 
+                    ctx.shadowColor=s.shadow; // Skin Shadow
+                }
+                
+                ctx.fillStyle=s.body; // Skin Body
+                ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+                
+                ctx.lineWidth=3; 
+                ctx.strokeStyle=s.border; // Skin Border
+                ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+                
+                // Eye
+                let eyeOffset=Math.sin(frames*0.2)*2; 
+                ctx.fillStyle=s.eye; // Skin Eye
+                ctx.fillRect(-6+eyeOffset, -6-eyeOffset, 12, 12); 
+                
+                // Shield
                 if(this.hasShield) {
                     ctx.beginPath();
                     ctx.lineWidth = 3;
@@ -631,8 +747,8 @@
             list: [],
             
             update: function() {
-                // SPAWN LOGIC
                 if(frames % 55 === 0) {
+                    pipeSpawnCount++;
                     let minH = 60; 
                     let maxH = height - GAP - minH;
                     
@@ -656,20 +772,21 @@
                     let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
                     let moveY = (Math.random()-0.5)*1.5; 
                     
-                   // ... inside obstacles.update ...
-                    
-                    // --- SHIELD SPAWN LOGIC ---
                     let spawnShield = false;
-                    let shieldY = 0;
-                    let forceStatic = false; // <--- NEW FLAG
+                    let forceStatic = false; 
 
-                    // Logic: Only spawn between 15-30, once per run
-                    if (score >= 15 && score <= 30 && !hasShieldSpawned && Math.random() < 0.15 && !player.hasShield) {
+                    if (!infiniteMode && score >= 15 && score <= 30 && !hasShieldSpawned && Math.random() < 0.15 && !player.hasShield) {
                         spawnShield = true;
                         hasShieldSpawned = true;
-                        forceStatic = true; // <--- We will use this to freeze the wall
-                        let gapCenter = topH + (GAP / 2);
-                        shieldY = gapCenter; 
+                    }
+                    
+                    if (infiniteMode && pipeSpawnCount % 30 === 0 && !player.hasShield) {
+                        spawnShield = true;
+                    }
+
+                    if (spawnShield) {
+                        forceStatic = true; 
+                        items.push({ x: width + 20, y: topH + (GAP / 2), type: 'SHIELD', taken: false });
                     }
 
                     this.list.push({
@@ -678,22 +795,14 @@
                         top: topH, 
                         bottom: height-GAP-topH, 
                         passed: false, 
-                        
-                        // FIX: If holding a shield, set speed to 0 so it doesn't crush the item
                         moveY: forceStatic ? 0 : moveY, 
                         isAnomaly: forceStatic ? false : isAnomaly,     
                         anomalySpeed: forceStatic ? 0 : anomalySpeed, 
-                        
                         anomalyOffset: 0,
                         hasBeenHit: false
                     });
-                    
-                    if(spawnShield) {
-                        items.push({ x: width + 20, y: shieldY, type: 'SHIELD', taken: false });
-                    }
                 }
 
-                // MOVEMENT & COLLISION
                 for(let p of this.list) {
                     p.x -= SPEED;
                     p.top += p.moveY; 
@@ -705,14 +814,12 @@
                         if(p.top < 40 || p.top > height - GAP - 40) p.anomalySpeed *= -1;
                     }
 
-                    // Collision Box
                     let pad = 8; 
-                    if(!p.hasBeenHit && // If already hit (and shielded), ignore
+                    if(!p.hasBeenHit && 
                        player.x + pad < p.x + p.w && 
                        player.x + player.size - pad > p.x && 
                        (player.y + pad < p.top || player.y + player.size - pad > height - p.bottom)) {
                         
-                        // --- SHIELD CHECK ---
                         if (player.hasShield) {
                             player.hasShield = false;
                             p.hasBeenHit = true; 
@@ -730,26 +837,12 @@
                     if(p.x + p.w < player.x && !p.passed) {
                         score++; p.passed = true; SFX.score(); triggerShake();
                         
-                        // --- CHECK MODE ---
-                        if (infiniteMode) {
-                            scoreCounter.innerText = score;
-                        } else {
-                            updateProgress();
-                        }
+                        if (infiniteMode) scoreCounter.innerText = score;
+                        else updateProgress();
                         
                         switchBiome();
                         if(!PERF_MODE) shockwaves.push({x: player.x, y: player.y, r: 10, alpha: 1});
-                        
-                        // Special text for anomalies
-                        if(p.isAnomaly && !PERF_MODE) {
-                            floatTexts.push({text: "ANOMALY!", x: player.x, y: player.y-40, life: 1.2, vy: -3});
-                        }
-                        else if(Math.random() > 0.6 && !PERF_MODE) {
-                             const words = ["POW", "GOOD", "NICE", "EZ", "WOAH"];
-                             floatTexts.push({text: words[Math.floor(Math.random()*words.length)], x: player.x, y: player.y-40, life: 1.0, vy: -2});
-                        }
-                        
-                        // ONLY WIN IF NOT INFINITE MODE
+                        if(p.isAnomaly && !PERF_MODE) floatTexts.push({text: "ANOMALY!", x: player.x, y: player.y-40, life: 1.2, vy: -3});
                         if(!infiniteMode && score >= TARGET_SCORE) winGame();
                     }
                 }
@@ -840,7 +933,6 @@
     
         // --- CORE FUNCTIONS ---
        function die() {
-            // HIGH SCORE CHECK
             if(score > highScore) {
                 highScore = score;
                 localStorage.setItem('powa-high-score', highScore);
@@ -860,7 +952,6 @@
             setTimeout(() => { bgFail.style.opacity = '1'; }, 10);
             setTimeout(() => { deathModal.style.display = 'flex'; }, 800);
 
-            // --- AUTO SUBMIT LOGIC ---
             const savedName = localStorage.getItem('powa-username');
             if (savedName) {
                 document.getElementById('username-input').value = savedName;
@@ -887,29 +978,25 @@
             window.dispatchEvent(new Event('sys-buffer-ready'));
         }
 
-       window.continueGame = function() {
-            // 1. Setup State
+        window.continueGame = function() {
             infiniteMode = true;
             isUnlocked = true; 
             localStorage.setItem('powa-unlocked', 'true');
             
-            // 2. Hide Win Modal immediately
             winModal.style.display = 'none';
             bgWin.style.opacity = '0';
             setTimeout(() => { bgWin.style.display = 'none'; }, 500);
 
-            // 3. UI Switch
             progressContainer.style.display = 'none';
             scoreCounter.style.display = 'block';
             scoreCounter.innerText = score;
 
-            // 4. THE COUNTDOWN LOGIC
+            // --- COUNTDOWN LOGIC ---
             let count = 3;
             const countEl = document.getElementById('countdown');
             countEl.style.display = 'block';
             countEl.innerText = count;
             
-            // Play a small "beep" sound for countdown (optional)
             if(audioCtx.state === 'suspended') audioCtx.resume();
             playTone(400, 'sine', 0.1, 0.1);
 
@@ -917,19 +1004,16 @@
                 count--;
                 if(count > 0) {
                     countEl.innerText = count;
-                    playTone(400, 'sine', 0.1, 0.1); // Beep
+                    playTone(400, 'sine', 0.1, 0.1);
                 } else {
-                    // GO!
                     clearInterval(timer);
                     countEl.style.display = 'none';
-                    
-                    // Resume Game Physics
                     player.velocity = -JUMP; 
                     gameState = 'PLAY';
                     MUSIC.resume();
-                    playTone(800, 'square', 0.2, 0.1); // High pitch "GO" sound
+                    playTone(800, 'square', 0.2, 0.1);
                 }
-            }, 1000); // Run every 1 second
+            }, 1000);
         };
 
         window.resetLevel = function() {
@@ -940,18 +1024,15 @@
 
             gameState = 'START';
             score = 0; frames = 0;
+            pipeSpawnCount = 0; 
             currentBiome = 0; 
             
-            // LOGIC: Infinite Mode vs Normal Mode
             if (isUnlocked) {
                 infiniteMode = true;
                 progressContainer.style.display = 'none';
-                
-                // FIX: Hide the "0" while on the Menu
                 scoreCounter.style.display = 'none'; 
                 scoreCounter.innerText = "0";
             } else {
-                // Ensure Level 1 players see the bar
                 infiniteMode = false;
                 progressContainer.style.display = 'flex';
                 scoreCounter.style.display = 'none';
@@ -963,7 +1044,7 @@
             
             player.y = height/2; player.velocity = 0; player.rotation = 0;
             player.hasShield = false; 
-            hasShieldSpawned = false; // Reset shield spawn flag
+            hasShieldSpawned = false; 
             
             obstacles.list = []; trail = []; shockwaves = []; floatTexts = []; items = [];
             
@@ -977,7 +1058,6 @@
             if(gameState === 'PLAY') return;
             if(audioCtx.state === 'suspended') audioCtx.resume(); 
             
-            // Show score if in infinite mode
             if(infiniteMode) scoreCounter.style.display = 'block';
             
             gameState = 'PLAY';
@@ -986,7 +1066,6 @@
             player.velocity = -JUMP;
         }
 
-        // --- UPDATE LOOP ---
         function updatePhysics() {
             if(gameState !== 'PLAY' && gameState !== 'DIE_ANIM') return;
             
@@ -1075,7 +1154,8 @@
         function handleInput(e) {
             if(e.type === 'keydown' && e.code === 'Space') e.preventDefault();
             if(e.target.id === 'perf-btn') return;
-            
+            if(e.target.closest('#leaderboard')) return;
+
             if(gameState === 'WIN_PAUSE') return;
             if(gameState === 'START') startGame();
             else if(gameState === 'PLAY') {
@@ -1091,10 +1171,9 @@
         window.addEventListener('touchstart', handleInput, {passive: false});
 
         // --------------------------------------------------------
-        // FIREBASE DATABASE LOGIC (REAL-TIME FIX)
+        // FIREBASE & LEADERBOARD LOGIC
         // --------------------------------------------------------
 
-        // !!! PASTE YOUR FIREBASE CONFIG HERE !!!
         const firebaseConfig = {
             apiKey: "AIzaSyCTnLXpYRMw8pxaBS1cIqeeGqtD7A1Mtow",
             authDomain: "powa-2f1bc.firebaseapp.com",
@@ -1104,125 +1183,106 @@
             appId: "1:522344119710:web:3bd572ef6580abd4c76a8f"
         };
 
-        // Initialize Firebase safely
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // 1. Submit Score (Best Score Logic + Auto Submit)
+        let currentLeaderboardListener = null;
+
+        window.switchTab = function(mode) {
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(b => b.classList.remove('active'));
+            if(mode === 'daily') buttons[0].classList.add('active');
+            else buttons[1].classList.add('active');
+
+            fetchLeaderboard(mode);
+        };
+
+        function fetchLeaderboard(mode) {
+            const listDiv = document.getElementById('leaderboard-list');
+            listDiv.innerHTML = "<div style='text-align:center; color:#0ff; padding-top:20px; animation:blink 1s infinite;'>LOADING...</div>";
+
+            if(currentLeaderboardListener) currentLeaderboardListener(); 
+
+            const collectionName = (mode === 'daily') ? `leaderboard_${KEY_ID}` : "leaderboard";
+
+            currentLeaderboardListener = db.collection(collectionName)
+                .orderBy("score", "desc")
+                .limit(10)
+                .onSnapshot((querySnapshot) => {
+                    let html = ""; let rank = 1;
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        const safeName = data.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        
+                        let rankColor="#aaa"; let bgStyle="transparent"; let borderStyle="1px dashed #333";
+                        if(rank===1) { rankColor="#ffff00"; borderStyle="1px solid #ffff00"; bgStyle="rgba(255,255,0,0.1)"; }
+                        else if(rank===2) { rankColor="#00ffff"; borderStyle="1px dotted #00ffff"; }
+                        else if(rank===3) { rankColor="#bd00ff"; borderStyle="1px dotted #bd00ff"; }
+
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:${borderStyle}; background:${bgStyle}; padding: 5px 4px; margin-bottom: 2px;">
+                            <span style="color:${rankColor}; font-family:'Russo One'; font-size:0.9rem;">
+                                <span style="display:inline-block; width:25px; text-align:right; margin-right:10px;">#${rank}</span>${safeName}
+                            </span>
+                            <span style="color:${rankColor}; font-family:'Russo One'; font-size:1rem;">${data.score}</span>
+                        </div>`;
+                        rank++;
+                    });
+                    if(html==="") html="<div style='text-align:center; color:#555; margin-top:30px; font-family:monospace;'>[ NO SCORES YET ]</div>";
+                    listDiv.innerHTML = html;
+                });
+        }
+
+        function submitToCollection(collectionName, name, score) {
+            return db.collection(collectionName).where("name", "==", name).get()
+            .then((snapshot) => {
+                if(!snapshot.empty) {
+                    let docId = snapshot.docs[0].id;
+                    let oldScore = snapshot.docs[0].data().score;
+                    if(score > oldScore) return db.collection(collectionName).doc(docId).update({score: score, date: new Date()});
+                    else return Promise.resolve();
+                } else {
+                    return db.collection(collectionName).add({name: name, score: score, date: new Date()});
+                }
+            });
+        }
+
         window.submitScore = function(isAuto = false) {
             const nameInput = document.getElementById('username-input');
             const submitBtn = document.getElementById('submit-score-btn');
-            
-            const name = nameInput.value.toUpperCase().trim() || "ANONYMOUS";
-            
-            // Save name for automatic future submissions
+            let rawName = nameInput.value.toUpperCase().trim();
+            const name = rawName.substring(0, 15) || "ANONYMOUS";
             localStorage.setItem('powa-username', name);
 
-            if(score === 0) { 
-                if(!isAuto) alert("Play the game first!"); 
-                return; 
-            }
+            if(score===0 && !isAuto) { alert("Play first!"); return; }
             
             submitBtn.innerText = isAuto ? "AUTO-SENDING..." : "CHECKING...";
-            submitBtn.disabled = true;
-            nameInput.disabled = true;
+            submitBtn.disabled = true; nameInput.disabled = true;
 
-            // Check if user exists
-            db.collection("leaderboard").where("name", "==", name).get()
-            .then((querySnapshot) => {
-                if (!querySnapshot.empty) {
-                    // Update existing score if higher
-                    let docId = querySnapshot.docs[0].id;
-                    let oldScore = querySnapshot.docs[0].data().score;
-
-                    if (score > oldScore) {
-                        return db.collection("leaderboard").doc(docId).update({
-                            score: score,
-                            date: new Date()
-                        }).then(() => "UPDATED");
-                    } else {
-                        return Promise.resolve("KEPT_OLD");
-                    }
-                } else {
-                    // New user -> Add new entry
-                    return db.collection("leaderboard").add({
-                        name: name,
-                        score: score,
-                        date: new Date()
-                    }).then(() => "ADDED");
-                }
-            })
-            .then((result) => {
-                if(result === "UPDATED") submitBtn.innerText = "NEW HIGHSCORE!";
-                else if(result === "KEPT_OLD") submitBtn.innerText = "KEPT BEST"; 
-                else submitBtn.innerText = "SENT!";
-                
+            const dailyCollection = `leaderboard_${KEY_ID}`;
+            
+            Promise.all([
+                submitToCollection("leaderboard", name, score),   
+                submitToCollection(dailyCollection, name, score)
+            ]).then(() => {
+                submitBtn.innerText = "SENT!";
                 submitBtn.style.background = "#333";
-            })
-            .catch((error) => {
-                console.error("Error submitting score: ", error);
+            }).catch((err) => {
+                console.error(err);
                 submitBtn.innerText = "ERROR";
                 submitBtn.disabled = false;
             });
         };
 
-        // 2. Real-Time Listener (Uniform Spacing Fix)
-        db.collection("leaderboard")
-            .orderBy("score", "desc")
-            .limit(10)
-            .onSnapshot((querySnapshot) => {
-                const listDiv = document.getElementById('leaderboard-list');
-                let html = "";
-                let rank = 1;
-                
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    const safeName = data.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                    
-                    // --- COLOR SETTINGS ---
-                    let rankColor = "#aaaaaa"; 
-                    let bgStyle = "transparent";
-                    let borderStyle = "1px dashed #333";
-                    
-                    if(rank === 1) { 
-                        rankColor = "#ffff00"; 
-                        borderStyle = "1px solid #ffff00";
-                        bgStyle = "rgba(255, 255, 0, 0.1)";
-                    }
-                    else if(rank === 2) { 
-                        rankColor = "#00ffff"; 
-                        borderStyle = "1px dotted #00ffff";
-                    }
-                    else if(rank === 3) { 
-                        rankColor = "#bd00ff"; 
-                        borderStyle = "1px dotted #bd00ff";
-                    }
-                    
-                    // --- UNIFORM SPACING ---
-                    html += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:${borderStyle}; background:${bgStyle}; padding: 5px 4px; margin-bottom: 2px;">
-                        <span style="color:${rankColor}; font-family: 'Russo One', sans-serif; font-size: 0.9rem;">
-                            <span style="display:inline-block; width:25px; text-align:right; margin-right:10px;">#${rank}</span>${safeName}
-                        </span>
-                        <span style="color:${rankColor}; font-family: 'Russo One', sans-serif; font-size: 1rem;">${data.score}</span>
-                    </div>`;
-                    rank++;
-                });
-                
-                if(html === "") html = "<div style='text-align:center; color:#555; margin-top:30px; font-family: monospace;'>[ NO SCORES YET ]</div>";
-                listDiv.innerHTML = html;
-            }, (error) => {
-                console.error("Error getting real-time updates: ", error);
-            });
-
         initGalaxy(); initParticles(); resetLevel(); requestAnimationFrame(loop);
+        switchTab('daily');
+
+        // CHECK WARNING MODE
+        if (KEY_WARNING_MODE === "ON") {
+            const warnBox = document.getElementById('key-warning');
+            if(warnBox) warnBox.style.display = 'block';
+        }
     </script>
 </body>
 </html>
-
-
-
 
 
