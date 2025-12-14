@@ -432,6 +432,21 @@
             osc.start(audioCtx.currentTime + delay);
             osc.stop(audioCtx.currentTime + delay + duration);
         }
+        // --- CHEAT VARS ---
+        let GOD_MODE = false; // Default is OFF. Press 'G' to toggle.
+
+        // Toggle Listener
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyG') {
+                GOD_MODE = !GOD_MODE;
+                // Visual feedback in console or alert (optional)
+                console.log("GOD MODE: " + (GOD_MODE ? "ON" : "OFF"));
+                
+                // Show floating text confirmation
+                if(!PERF_MODE) floatTexts.push({text: GOD_MODE ? "GOD MODE ON" : "GOD MODE OFF", x: player.x, y: player.y-40, life: 2.0, vy: -1});
+                SFX.shieldUp(); // Play sound to confirm
+            }
+        });
 
         const SFX = {
             jump: () => playTone(150, 'square', 0.1, 0.05),
@@ -736,7 +751,7 @@
                        player.x + player.size - pad > p.x && 
                        (player.y + pad < p.top || player.y + player.size - pad > height - p.bottom)) {
                         
-                        if (player.hasShield) {
+                       if (player.hasShield) {
                             player.hasShield = false;
                             p.hasBeenHit = true; 
                             SFX.shieldBreak();
@@ -746,9 +761,11 @@
                                 for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#00ffff', size: 4});
                             }
                         } else {
-                            die();
+                            // ONLY DIE IF GOD MODE IS OFF
+                            if (!GOD_MODE) {
+                                die();
+                            }
                         }
-                    }
 
                     if(p.x + p.w < player.x && !p.passed) {
                         score++; p.passed = true; SFX.score(); triggerShake();
@@ -1062,6 +1079,14 @@
             drawGalaxy(); drawGridLines();
             ctx.lineWidth = 4; for(let s of shockwaves) { ctx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`; ctx.beginPath(); ctx.arc(s.x+15, s.y+15, s.r, 0, Math.PI*2); ctx.stroke(); }
             ctx.font = "900 24px 'Russo One'"; ctx.textAlign = "center";
+            if (GOD_MODE) {
+                ctx.save();
+                ctx.fillStyle = "#ffff00";
+                ctx.shadowColor = "#ff0000";
+                ctx.shadowBlur = 20;
+                ctx.fillText("GOD MODE", width / 2, 80);
+                ctx.restore();
+            }
             for(let f of floatTexts) { ctx.save(); ctx.fillStyle = "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.shadowBlur = 10; ctx.shadowColor = '#0ff'; ctx.globalAlpha = f.life; ctx.strokeText(f.text, f.x, f.y); ctx.fillText(f.text, f.x, f.y); ctx.restore(); }
             
             for(let item of items) {
@@ -1233,6 +1258,7 @@
     </script>
 </body>
 </html>
+
 
 
 
