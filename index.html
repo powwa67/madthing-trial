@@ -355,15 +355,20 @@
 
         // --- GAME CONFIG & VERSION CONTROL ---
         const KEY_ID = "day_5"; 
-        
         const KEY_WARNING_MODE = "ON"; 
 
-        let TARGET_SCORE = 50; 
+        // !!! IMPORTANT: REPLACE THIS WITH YOUR CLOUDFLARE WORKER URL !!!
+        const WORKER_URL = "https://powa-vault.powwa.workers.dev";
+
+        let TARGET_SCORE = 5; 
         let SPEED = 6.5;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
         let GAP = 170; 
         let PERF_MODE = false;
+
+        // --- NEW: GAME START TIME FOR ANTI-CHEAT ---
+        let gameStartTime = 0;
 
         // --- STORAGE & PERSISTENCE CHECK ---
         let highScore = localStorage.getItem('powa-high-score') || 0;
@@ -400,17 +405,49 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
-        const _encData = [0,31,45,15,93,6,30,4,85,86,85,81,87,77,39,64,17,69,23,81,8,4,22,6,9,87,92,86,15,77,39,71,70,67,68]; 
-        const _salt = "string.elementAt";
-
-        window.addEventListener('sys-buffer-ready', () => {
-            let _stream = "";
-            for(let i=0; i<_encData.length; i++) {
-                let charCode = _encData[i] ^ _salt.charCodeAt(i % _salt.length);
-                _stream += String.fromCharCode(charCode);
+        // SERVER FETCH FUNCTION (UPDATED WITH SPEED LIMIT CHECK)
+        async function fetchServerKey() {
+            const keyTextBox = document.getElementById('key-text');
+            
+            // Basic client-side check to save server hits
+            if (gameStartTime === 0 || score === 0) {
+                 keyTextBox.innerText = "PLAY FIRST!";
+                 keyTextBox.style.color = "#ff4444";
+                 return;
             }
-            document.getElementById('key-text').innerText = _stream;
-        });
+
+            keyTextBox.innerText = "CONNECTING...";
+            keyTextBox.style.color = "#ffff00";
+            keyTextBox.style.animation = "blink 0.5s infinite";
+
+            try {
+                // Send score, secret, AND startTime
+                const response = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        score: score, 
+                        secret: "POWA_HANDSHAKE_v1",
+                        startTime: gameStartTime
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.key) {
+                    keyTextBox.innerText = data.key;
+                    keyTextBox.style.color = "#00ff00"; 
+                    keyTextBox.style.animation = "none";
+                } else {
+                    keyTextBox.innerText = data.error || "ACCESS DENIED";
+                    keyTextBox.style.color = "#ff0000";
+                }
+            } catch (error) {
+                console.error(error);
+                keyTextBox.innerText = "SERVER ERROR";
+                keyTextBox.style.color = "#ff0000";
+            }
+        }
 
         const BGM = new Audio('bgm_game.mp3');
         BGM.loop = true;
@@ -420,18 +457,9 @@
         let timeStopActive = false;
         let timeStopTimer = 0;
         
-        // --- GOD MODE VARS ---
-        let GOD_MODE = false; 
-
-        // Toggle Listener
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyG') {
-                GOD_MODE = !GOD_MODE;
-                console.log("GOD MODE: " + (GOD_MODE ? "ON" : "OFF"));
-                if(!PERF_MODE) floatTexts.push({text: GOD_MODE ? "GOD MODE ON" : "GOD MODE OFF", x: player.x, y: player.y-40, life: 2.0, vy: -1});
-                SFX.shieldUp(); 
-            }
-        });
+        // --- LEVEL 1 LIMITS ---
+        let level1ShieldCount = 0;
+        let level1ClockCount = 0;
 
         function playTone(freq, type, duration, vol=0.1, delay=0) {
             if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -702,23 +730,27 @@
                     let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
                     let moveY = (Math.random()-0.5)*1.5; 
                     
-                    // --- NEW SPAWN LOGIC (FIXED) ---
+                    // --- SPAWN LOGIC START ---
                     let spawnType = null;
 
-                    // 1. SHIELD (Normal Mode - Score 15 to 30)
-                    if (!infiniteMode && score >= 15 && score <= 30 && !hasShieldSpawned && Math.random() < 0.15 && !player.hasShield) {
-                        spawnType = 'SHIELD'; hasShieldSpawned = true;
+                    // 1. SHIELD (Level 1: Max 2 times total, random chance)
+                    if (!infiniteMode && level1ShieldCount < 2 && Math.random() < 0.1 && !player.hasShield) {
+                        spawnType = 'SHIELD';
+                        level1ShieldCount++;
                     }
                     
-                    // 2. SHIELD (Infinite Mode - Every 25 Pillars)
-                    // Changed from 30 to 25 so it doesn't clash with the Clock
+                    // 2. SHIELD (Infinite Mode: Every 25 Pillars)
                     if (infiniteMode && pipeSpawnCount % 25 === 0 && !player.hasShield) {
                         spawnType = 'SHIELD';
                     }
                     
-                    // 3. CLOCK (Infinite Mode - Every 30 Pillars)
-                    // Note: If both 25 and 30 trigger at the same time (e.g. at 150), 
-                    // this 'if' will overwrite the Shield, which is fine (Clock is rarer/cooler).
+                    // 3. CLOCK (Level 1: Score > 30, Max 2 times)
+                    if (!infiniteMode && score >= 30 && level1ClockCount < 2 && Math.random() < 0.15 && !timeStopActive) {
+                        spawnType = 'CLOCK';
+                        level1ClockCount++;
+                    }
+
+                    // 4. CLOCK (Infinite Mode: Every 30 Pillars)
                     if (infiniteMode && pipeSpawnCount % 30 === 0 && !timeStopActive) {
                         spawnType = 'CLOCK';
                     }
@@ -771,7 +803,7 @@
                                 for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#00ffff', size: 4});
                             }
                         } else {
-                            if (!GOD_MODE) die();
+                            die();
                         }
                     }
 
@@ -916,7 +948,8 @@
             bgWin.style.display = 'block';
             setTimeout(() => { bgWin.style.opacity = '1'; }, 10);
             winModal.style.display = 'flex';
-            window.dispatchEvent(new Event('sys-buffer-ready'));
+            // TRIGGER SERVER FETCH
+            fetchServerKey();
         }
 
         window.continueGame = function() {
@@ -931,6 +964,9 @@
             progressContainer.style.display = 'none';
             scoreCounter.style.display = 'block';
             scoreCounter.innerText = score;
+            
+            // RESET START TIME FOR SPEED CHECK
+            gameStartTime = Date.now();
 
             // --- COUNTDOWN LOGIC ---
             let count = 3;
@@ -972,6 +1008,10 @@
             timeStopActive = false;
             canvas.classList.remove('time-frozen');
             
+            // RESET LEVEL 1 SPAWN COUNTERS
+            level1ShieldCount = 0;
+            level1ClockCount = 0;
+            
             if (isUnlocked) {
                 infiniteMode = true;
                 progressContainer.style.display = 'none';
@@ -1002,6 +1042,9 @@
         function startGame() {
             if(gameState === 'PLAY') return;
             if(audioCtx.state === 'suspended') audioCtx.resume(); 
+            
+            // SET START TIME FOR ANTI-CHEAT
+            gameStartTime = Date.now();
             
             if(infiniteMode) scoreCounter.style.display = 'block';
             
@@ -1093,18 +1136,6 @@
 
             drawGalaxy(); drawGridLines();
             ctx.lineWidth = 4; for(let s of shockwaves) { ctx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`; ctx.beginPath(); ctx.arc(s.x+15, s.y+15, s.r, 0, Math.PI*2); ctx.stroke(); }
-            
-            // GOD MODE INDICATOR
-            if (GOD_MODE) {
-                ctx.save();
-                ctx.font = "900 24px 'Russo One'"; ctx.textAlign = "center";
-                ctx.fillStyle = "#ffff00";
-                ctx.shadowColor = "#ff0000";
-                ctx.shadowBlur = 20;
-                ctx.fillText("GOD MODE", width / 2, 80);
-                ctx.restore();
-            }
-
             ctx.font = "900 24px 'Russo One'"; ctx.textAlign = "center";
             for(let f of floatTexts) { ctx.save(); ctx.fillStyle = "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.shadowBlur = 10; ctx.shadowColor = '#0ff'; ctx.globalAlpha = f.life; ctx.strokeText(f.text, f.x, f.y); ctx.fillText(f.text, f.x, f.y); ctx.restore(); }
             
@@ -1280,4 +1311,3 @@
     </script>
 </body>
 </html>
-
