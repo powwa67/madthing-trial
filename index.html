@@ -31,6 +31,14 @@
             border: 4px solid #fff;
             border-radius: 12px;
             overflow: hidden;
+            transition: filter 0.5s, box-shadow 0.5s, border-color 0.5s;
+        }
+
+        /* GRINCH MODE EFFECT */
+        .grinch-mode {
+            filter: hue-rotate(120deg) contrast(1.2) !important; /* Turns Red -> Green */
+            border-color: #00ff00 !important;
+            box-shadow: 0 0 60px #00ff00 !important;
         }
 
         #debug-log {
@@ -472,8 +480,12 @@
         BGM.loop = true;
         BGM.volume = 0.5;
         
+        // --- NEW FEATURES VARIABLES ---
         let timeStopActive = false;
         let timeStopTimer = 0;
+        
+        let grinchModeActive = false;
+        let grinchTimer = 0;
         
         let level1ShieldCount = 0;
         let level1ClockCount = 0;
@@ -495,13 +507,19 @@
 
         const SFX = {
             jump: () => {
-                playTone(1200, 'sine', 0.1, 0.05);
+                // JINGLE EFFECT LAYERING
+                playTone(1200, 'sine', 0.1, 0.05); // Base Jump
                 playTone(1500, 'triangle', 0.1, 0.05, 0.02);
+                // SLEIGH BELLS
+                playTone(2000, 'sine', 0.1, 0.05, 0); 
+                playTone(2500, 'sine', 0.1, 0.03, 0.05);
+                playTone(3000, 'sine', 0.1, 0.02, 0.1);
             },
             score: () => playTone(880, 'sine', 0.2, 0.05),
             shieldUp: () => { playTone(440, 'triangle', 0.2, 0.1); playTone(554, 'triangle', 0.2, 0.1, 0.1); playTone(659, 'triangle', 0.3, 0.1, 0.2); },
             shieldBreak: () => { playTone(150, 'sawtooth', 0.3, 0.2); playTone(100, 'square', 0.3, 0.2, 0.05); },
             timeStop: () => { playTone(1000, 'sine', 1.0, 0.1); playTone(2000, 'triangle', 0.5, 0.1, 0.1); },
+            grinchStart: () => { playTone(100, 'sawtooth', 1.0, 0.3); playTone(80, 'square', 1.0, 0.3, 0.1); },
             win: () => {
                 let notes = [659, 659, 659, 0, 659, 659, 659, 0, 659, 783, 523, 587, 659];
                 notes.forEach((n, i) => { if(n>0) playTone(n, 'triangle', 0.3, 0.1, i*0.25); });
@@ -532,7 +550,10 @@
             play: () => { BGM.play().catch(e => console.log("Audio start req")); },
             stop: () => { BGM.pause(); BGM.currentTime = 0; },
             pause: () => { BGM.pause(); },
-            resume: () => { BGM.play(); }
+            resume: () => { BGM.play(); },
+            grinchMode: (active) => {
+                BGM.playbackRate = active ? 0.75 : 1.0; // Slow down for Grinch
+            }
         };
 
         // --- STATE & ASSETS ---
@@ -628,7 +649,6 @@
         function initWinter() {
             if(PERF_MODE) return;
             snowFlakes = []; northernLights = [];
-            // OPTIMIZED: Reduced count from 200 -> 150
             for(let i=0; i<150; i++) {
                 snowFlakes.push({
                     x: Math.random()*width, 
@@ -684,11 +704,14 @@
         // --- GAME OBJECTS ---
         const player = {
             x: 60, y: 200, size: 36, velocity: 0, rotation: 0,
-            shieldCount: 0, // NEW: Stackable Shields
+            shieldCount: 0, 
             
             update: function() {
-                this.velocity += GRAVITY;
+                // GRAVITY LOGIC (Heavier in Grinch Mode)
+                let currentGravity = grinchModeActive ? 0.9 : GRAVITY;
+                this.velocity += currentGravity;
                 this.y += this.velocity;
+                
                 if(frames % 4 === 0 && gameState === 'PLAY') {
                     trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0});
                     if(trail.length > 8) trail.shift();
@@ -697,7 +720,6 @@
             },
             draw: function() {
                 for(let t of trail) {
-                    // SAFE RADIUS CALCULATION (Prevents Crash)
                     let r = Math.max(0, this.size/2 * t.alpha);
                     if(r > 0) {
                         ctx.save(); ctx.translate(t.x+this.size/2, t.y+this.size/2); 
@@ -723,6 +745,19 @@
                 ctx.lineWidth=2; ctx.strokeStyle="#fff"; 
                 ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
                 
+                // SANTA HAT DRAWING
+                ctx.save();
+                ctx.rotate(-Math.PI/2); // Rotate to sit on top relative to rotation
+                ctx.translate(0, -this.size/2 - 5);
+                ctx.fillStyle = "#cc0000";
+                ctx.beginPath();
+                ctx.moveTo(-15, 0); ctx.lineTo(15, 0); ctx.lineTo(0, -25);
+                ctx.fill();
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.arc(0, -25, 6, 0, Math.PI*2); ctx.fill(); // Pom Pom
+                ctx.fillRect(-16, 0, 32, 6); // Brim
+                ctx.restore();
+
                 // SHIELD DRAWING
                 if(this.shieldCount > 0) {
                     ctx.beginPath();
@@ -738,7 +773,7 @@
                 if(this.shieldCount > 0) {
                     ctx.fillStyle = "#00ff00";
                     ctx.font = "bold 16px monospace";
-                    ctx.fillText("x" + this.shieldCount, this.x + this.size/2, this.y - 10);
+                    ctx.fillText("x" + this.shieldCount, this.x + this.size/2, this.y - 20);
                 }
             }
         };
@@ -757,7 +792,6 @@
                     let topH = prevTop + (step * direction);
                     if(topH < minH) topH = minH + 20; if(topH > maxH) topH = maxH - 20;
                     
-                    // --- ANOMALY & TRAP LOGIC RESTORED ---
                     let isAnomaly = Math.random() < 0.2;
                     let anomalySpeed = isAnomaly ? (2 * (Math.random()<0.5?1:-1)) : 0;
                     let centerY = topH + (GAP / 2);
@@ -774,25 +808,31 @@
                         spawnType = 'CLOCK';
                     }
                     
-                    let forceStatic = false;
+                    // OPEN AIR MYSTERY BOX LOGIC (New)
+                    if (!spawnType && !timeStopActive && !grinchModeActive && Math.random() < 0.15) {
+                        // Spawn in the GAP between pipes
+                        items.push({ 
+                            x: width + 100, // Offset so it's between pipes
+                            y: Math.random() * (height - 200) + 100, 
+                            type: 'MYSTERY', 
+                            taken: false 
+                        });
+                    }
+
                     if (spawnType) {
-                        forceStatic = true;
                         items.push({ x: width + 20, y: topH + (GAP / 2), type: spawnType, taken: false });
                     }
                     
                     this.list.push({
                         x: width, w: 55, top: topH, bottom: height-GAP-topH, 
                         passed: false, 
-                        // Restore Anomaly/Trap properties
-                        isAnomaly: forceStatic ? false : isAnomaly, 
-                        anomalySpeed: forceStatic ? 0 : anomalySpeed, 
-                        
+                        isAnomaly: isAnomaly, 
+                        anomalySpeed: anomalySpeed, 
                         centerY: centerY,
                         breathSpeed: 0.03 + Math.random() * 0.05,
                         breathPhase: Math.random() * Math.PI * 2,
                         breathAmp: 30 + Math.random() * 40,
-                        isTrap: !isAnomaly && Math.random() < 0.3, // 30% Chance for Closing Trap
-                        
+                        isTrap: !isAnomaly && Math.random() < 0.3,
                         hasBeenHit: false
                     });
                 }
@@ -802,23 +842,20 @@
                     
                     if (!timeStopActive) {
                         if (p.isAnomaly) {
-                             // MOVING CHIMNEY LOGIC
                              p.top += p.anomalySpeed; p.bottom -= p.anomalySpeed; 
                              if(p.top < 40 || p.top > height - GAP - 40) p.anomalySpeed *= -1;
                         } else {
-                            // CLOSING SNOWDRIFT (TRAP) LOGIC
                             let wave = Math.sin(frames * p.breathSpeed + p.breathPhase);
-                            let currentGap = GAP + (wave * p.breathAmp * 0.5); // Subtle breathing
+                            let currentGap = GAP + (wave * p.breathAmp * 0.5); 
                             
                             if (p.isTrap) {
                                 let distToPlayer = p.x - player.x;
                                 if (distToPlayer < 300 && distToPlayer > -50) {
                                     let panicFactor = (300 - distToPlayer) * 0.35; 
-                                    currentGap -= panicFactor; // CLOSE THE GAP
+                                    currentGap -= panicFactor; 
                                 }
                             }
-                            
-                            if (currentGap < 90) currentGap = 90; // Safety min gap
+                            if (currentGap < 90) currentGap = 90; 
                             
                             p.top = p.centerY - (currentGap / 2);
                             p.bottom = height - (p.centerY + (currentGap / 2));
@@ -864,13 +901,11 @@
                 
                 for(let p of this.list) {
                     let activeColor = "#fff";
-                    // Color Logic for Traps/Anomalies
-                    if (p.isAnomaly) activeColor = "#00ff00"; // Green Magic
-                    if (p.isTrap) activeColor = "#ffaa00"; // ORANGE WARNING
+                    if (p.isAnomaly) activeColor = "#00ff00"; 
+                    if (p.isTrap) activeColor = "#ffaa00"; 
                     if (p.hasBeenHit) activeColor = "#555";
 
                     if (era === 0) {
-                        // CANDY CANE STYLE (Optimized)
                         ctx.save();
                         ctx.fillStyle = "#fff"; 
                         ctx.fillRect(p.x, 0, p.w, p.top);
@@ -883,15 +918,12 @@
                             ctx.rect(p.x, height - p.bottom, p.w, p.bottom);
                             ctx.clip();
                             
-                            // IF TRAP, STRIPES ARE ORANGE
                             ctx.strokeStyle = (activeColor === "#fff") ? "#ff0000" : activeColor;
-                            
                             ctx.lineWidth = 15;
                             ctx.beginPath();
-                            // OPTIMIZATION: Only draw lines visible on screen
                             let startY = -50;
                             let endY = height + 50;
-                            for (let i = startY; i < endY; i += 40) { // Increased gap for performance
+                            for (let i = startY; i < endY; i += 40) { 
                                 ctx.moveTo(p.x - 20, i);
                                 ctx.lineTo(p.x + p.w + 20, i + 40);
                             }
@@ -902,10 +934,8 @@
                         ctx.lineWidth = 3; ctx.strokeStyle = activeColor;
                         ctx.strokeRect(p.x, -2, p.w, p.top+2);
                         ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2);
-                        
                         ctx.restore();
                     } else {
-                        // CHIMNEY STYLE
                         ctx.fillStyle = "#883333";
                         ctx.fillRect(p.x, 0, p.w, p.top);
                         ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
@@ -920,13 +950,11 @@
                             }
                             ctx.restore();
                             
-                            // Snow Caps
                             ctx.fillStyle="#fff";
                             ctx.fillRect(p.x - 5, p.top - 10, p.w + 10, 10);
                             ctx.fillRect(p.x - 5, height - p.bottom, p.w + 10, 10);
                         }
                         
-                        // Chimney Glow
                         if (p.isTrap || p.isAnomaly) {
                              ctx.lineWidth = 3; ctx.strokeStyle = activeColor;
                              ctx.strokeRect(p.x, -2, p.w, p.top+2);
@@ -937,6 +965,16 @@
             }
         };
     
+        function triggerGrinchMode() {
+            if(grinchModeActive) return;
+            grinchModeActive = true;
+            grinchTimer = 60 * 8; // 8 seconds
+            wrapper.classList.add('grinch-mode');
+            MUSIC.grinchMode(true);
+            SFX.grinchStart();
+            if(!PERF_MODE) floatTexts.push({text: "GRINCH MODE!", x: width/2, y: height/2, life: 3.0, vy: -1});
+        }
+
         // --- CORE FUNCTIONS ---
         function die() {
             if(score > highScore) {
@@ -1053,6 +1091,8 @@
             currentBiome = 0; 
             
             timeStopActive = false;
+            grinchModeActive = false;
+            wrapper.classList.remove('grinch-mode');
             canvas.classList.remove('time-frozen');
             level1ShieldCount = 0;
             level1ClockCount = 0;
@@ -1072,7 +1112,7 @@
             wrapper.style.borderColor = "#fff";
             
             player.y = height/2; player.velocity = 0; player.rotation = 0;
-            player.shieldCount = 0; // RESET SHIELD STACK
+            player.shieldCount = 0; 
             
             obstacles.list = []; trail = []; shockwaves = []; floatTexts = []; items = [];
             initWinter(); initParticles();
@@ -1112,6 +1152,15 @@
                     SFX.shieldUp();
                 }
             }
+            
+            if(grinchModeActive) {
+                grinchTimer--;
+                if(grinchTimer <= 0) {
+                    grinchModeActive = false;
+                    wrapper.classList.remove('grinch-mode');
+                    MUSIC.grinchMode(false);
+                }
+            }
 
             frames++;
 
@@ -1122,7 +1171,6 @@
             shockwaves = shockwaves.filter(s => { s.r+=10; s.alpha-=0.05; return s.alpha>0; });
             floatTexts = floatTexts.filter(f => { f.y+=f.vy; f.life-=0.02; return f.life>0; });
             
-            // TRAIL FIX (SAFE)
             trail = trail.filter(t => { t.alpha -= 0.08; return t.alpha > 0; });
 
             items = items.filter(item => {
@@ -1132,9 +1180,31 @@
                 let dist = Math.sqrt(dx*dx + dy*dy);
                 if(dist < 40 && !item.taken) {
                    item.taken = true;
-                   if (item.type === 'SHIELD') {
-                       player.shieldCount++; // ADD SHIELD CHARGE
-                       SFX.shieldUp();
+                   
+                   // --- NAUGHTY OR NICE LOGIC ---
+                   if (item.type === 'MYSTERY') {
+                       if (Math.random() > 0.4) {
+                           // NICE
+                           let prize = Math.random();
+                           if (prize > 0.5) {
+                               score += 5; SFX.score();
+                               floatTexts.push({text: "NICE! +5", x: player.x, y: player.y-40, life: 1.5, vy: -2});
+                           } else {
+                               player.shieldCount++; SFX.shieldUp();
+                               floatTexts.push({text: "NICE! SHIELD", x: player.x, y: player.y-40, life: 1.5, vy: -2});
+                           }
+                       } else {
+                           // NAUGHTY
+                           if (Math.random() > 0.5) {
+                               score = Math.max(0, score - 5);
+                               floatTexts.push({text: "COAL! -5", x: player.x, y: player.y-40, life: 1.5, vy: -2});
+                           } else {
+                               triggerGrinchMode();
+                           }
+                       }
+                   }
+                   else if (item.type === 'SHIELD') {
+                       player.shieldCount++; SFX.shieldUp();
                        if(!PERF_MODE) floatTexts.push({text: "SHIELD +1", x: player.x, y: player.y-40, life: 1.0, vy: -2});
                    } else if (item.type === 'CLOCK') {
                        timeStopActive = true;
@@ -1182,6 +1252,12 @@
                         ctx.fillStyle = "#ccffff";
                         ctx.beginPath(); ctx.arc(item.x, item.y, 15, 0, Math.PI*2); ctx.fill();
                         ctx.fillStyle = "#0055aa"; ctx.fillText("❄", item.x, item.y+8); 
+                    } else if (item.type === 'MYSTERY') {
+                        ctx.shadowColor = '#ff00ff';
+                        ctx.fillStyle = "#ffdd00"; // Gold
+                        ctx.beginPath(); 
+                        ctx.fillRect(item.x-15, item.y-15, 30, 30);
+                        ctx.fillStyle = "#ff0000"; ctx.font="bold 20px monospace"; ctx.fillText("?", item.x, item.y+7);
                     }
                     ctx.restore();
                 }
