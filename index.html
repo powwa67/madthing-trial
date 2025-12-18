@@ -1170,9 +1170,10 @@
 
             draw: function() {
                 for (let b of this.list) {
-                    let color = "#ff0044"; // Red (Straight)
-                    if (b.type === 'WAVE') color = "#ffff00"; // Yellow
-                    if (b.type === 'TARGET') color = "#ff00ff"; // Purple
+                    // Sex Pistols Colors: Yellow/Orange for standard, Red for fast
+                    let color = "#ffaa00"; // Default Mista Orange
+                    if (b.type === 'WAVE') color = "#ffff00"; // Number 1 (Yellow)
+                    if (b.type === 'TARGET') color = "#ff0044"; // Aggressive (Red)
                     
                     ctx.fillStyle = color;
                     ctx.beginPath();
@@ -1180,13 +1181,28 @@
                     if (PERF_MODE) {
                         ctx.fillRect(b.x, b.y, b.w, b.h);
                     } else {
+                        // 1. Draw Bullet Body
                         ctx.shadowBlur = 10;
                         ctx.shadowColor = color;
                         ctx.roundRect(b.x, b.y, b.w, b.h, 5);
                         ctx.fill();
-                        ctx.fillStyle = "rgba(255,255,255,0.5)";
-                        ctx.fillRect(b.x + 10, b.y + 2, b.w, 2);
+                        
+                        // 2. Draw "Sex Pistol" Eye (The Stand look)
                         ctx.shadowBlur = 0;
+                        ctx.fillStyle = "#fff"; // White of eye
+                        // Draw eye near the front (left side since moving left)
+                        ctx.beginPath();
+                        ctx.arc(b.x + 5, b.y + 4, 3, 0, Math.PI*2);
+                        ctx.fill();
+                        
+                        ctx.fillStyle = "#000"; // Pupil
+                        ctx.beginPath();
+                        ctx.arc(b.x + 4, b.y + 4, 1.5, 0, Math.PI*2);
+                        ctx.fill();
+
+                        // 3. Trail
+                        ctx.fillStyle = "rgba(255,255,255,0.3)";
+                        ctx.fillRect(b.x + 10, b.y + 2, b.w, 2);
                     }
                 }
             }
@@ -1718,5 +1734,6 @@
     </script>
 </body>
 </html>
+
 
 
