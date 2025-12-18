@@ -33,9 +33,9 @@
             overflow: hidden;
         }
 
-        /* ERROR LOG STYLE */
+        /* DEBUG LOG (Keep hidden unless needed) */
         #debug-log {
-            position: absolute; bottom: 10px; left: 10px; right: 10px;
+            display: none; position: absolute; bottom: 10px; left: 10px; right: 10px;
             color: #ff0000; font-family: monospace; font-size: 12px;
             pointer-events: none; z-index: 999; text-shadow: 1px 1px 0 #000;
         }
@@ -235,7 +235,8 @@
 
     <div id="game-container-box">
         <div class="snow-overlay"></div>
-        <div id="debug-log"></div> <img id="bg-fail" src="fail.gif" class="bg-gif">
+        <div id="debug-log"></div>
+        <img id="bg-fail" src="fail.gif" class="bg-gif">
         <img id="bg-win" src="win.gif" class="bg-gif">
 
         <canvas id="gameCanvas"></canvas>
@@ -328,14 +329,14 @@
     </div>
 
     <script>
+        // CRASH HANDLER
         function logError(msg) {
             console.error(msg);
             const el = document.getElementById('debug-log');
-            if(el) el.innerHTML = msg;
+            if(el) { el.style.display='block'; el.innerText = "ERROR: " + msg; }
         }
-        
         window.onerror = function(msg, url, lineNo, columnNo, error) {
-            logError("JS ERROR: " + msg + " line: " + lineNo);
+            logError(msg);
             return false;
         };
 
@@ -697,10 +698,14 @@
             },
             draw: function() {
                 for(let t of trail) {
-                    ctx.save(); ctx.translate(t.x+this.size/2, t.y+this.size/2); 
-                    ctx.fillStyle = `rgba(255, 215, 0, ${t.alpha*0.5})`; 
-                    ctx.beginPath(); ctx.arc(0,0, this.size/2 * t.alpha, 0, Math.PI*2); ctx.fill();
-                    ctx.restore();
+                    // SAFE RADIUS CALCULATION
+                    let r = Math.max(0, this.size/2 * t.alpha);
+                    if(r > 0) {
+                        ctx.save(); ctx.translate(t.x+this.size/2, t.y+this.size/2); 
+                        ctx.fillStyle = `rgba(255, 215, 0, ${t.alpha*0.5})`; 
+                        ctx.beginPath(); ctx.arc(0,0, r, 0, Math.PI*2); ctx.fill();
+                        ctx.restore();
+                    }
                 }
 
                 ctx.save(); 
@@ -814,21 +819,17 @@
                     if (p.hasBeenHit) activeColor = "#555";
 
                     if (era === 0) {
-                        // CANDY CANE STYLE
                         ctx.save();
-                        
                         ctx.fillStyle = "#fff"; 
                         ctx.fillRect(p.x, 0, p.w, p.top);
                         ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
                         
-                        // Optimized Stripes with Batching (CRITICAL FIX)
                         if (!PERF_MODE) {
                             ctx.save();
                             ctx.beginPath();
                             ctx.rect(p.x, 0, p.w, p.top);
                             ctx.rect(p.x, height - p.bottom, p.w, p.bottom);
                             ctx.clip();
-                            
                             ctx.strokeStyle = "#ff0000";
                             ctx.lineWidth = 15;
                             ctx.beginPath();
@@ -845,10 +846,8 @@
                         ctx.lineWidth = 3; ctx.strokeStyle = "#aaa";
                         ctx.strokeRect(p.x, -2, p.w, p.top+2);
                         ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2);
-                        
                         ctx.restore();
                     } else {
-                        // CHIMNEY STYLE
                         ctx.fillStyle = "#883333";
                         ctx.fillRect(p.x, 0, p.w, p.top);
                         ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
@@ -1031,11 +1030,10 @@
         }
 
         function updatePhysics() {
-            // FIX: Background updates happen regardless of game state
             if (!timeStopActive) {
                 bgOffset -= SPEED * 0.5; if(bgOffset < -100) bgOffset = 0;
                 globalHue = (globalHue + 1) % 360;
-                updateWinter(); // Snow now falls even on Menu
+                updateWinter(); 
             }
 
             if(gameState !== 'PLAY' && gameState !== 'DIE_ANIM') return;
@@ -1057,7 +1055,9 @@
             
             shockwaves = shockwaves.filter(s => { s.r+=10; s.alpha-=0.05; return s.alpha>0; });
             floatTexts = floatTexts.filter(f => { f.y+=f.vy; f.life-=0.02; return f.life>0; });
-            trail.forEach(t => t.alpha -= 0.08);
+            
+            // CRASH FIX: FILTER TRAIL SO ALPHA IS NEVER NEGATIVE
+            trail = trail.filter(t => { t.alpha -= 0.08; return t.alpha > 0; });
 
             items = items.filter(item => {
                 item.x -= SPEED;
