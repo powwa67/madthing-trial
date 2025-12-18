@@ -64,7 +64,7 @@
 
         #top-bar {
             display: flex; align-items: center; padding: 20px; width: 100%; box-sizing: border-box;
-            justify-content: space-between; /* Changed to space-between for HP */
+            justify-content: space-between; 
         }
 
         #progress-container { flex-grow: 1; display: flex; flex-direction: column; margin: 0 15px; }
@@ -89,7 +89,7 @@
             transform: skew(-5deg);
         }
         
-        /* NEW: HP DISPLAY */
+        /* HP DISPLAY */
         #hp-display {
             display: none;
             font-size: 2rem;
@@ -98,7 +98,7 @@
             margin-right: 10px;
         }
         
-        /* NEW: TIMER DISPLAY */
+        /* TIMER DISPLAY (COUNT UP) */
         #survival-timer {
             display: none;
             font-size: 2.5rem;
@@ -310,7 +310,7 @@
                 </div>
                 
                 <div id="score-counter">30</div>
-                <div id="survival-timer">5:00</div> </div>
+                <div id="survival-timer">0:00</div> </div>
 
             <div id="main-menu">
                 <h1 id="title" class="glitch-anim">POWA<br>PROXY</h1>
@@ -439,8 +439,6 @@
         const KEY_WARNING_MODE = "OFF"; 
         
         let GAME_MODE = 'PILLARS'; // 'PILLARS' or 'BULLETS'
-        let SURVIVAL_TIME_LIMIT = 90; // 5 Minutes in Seconds
-        let currentSurvivalTime = SURVIVAL_TIME_LIMIT;
         
         // !!! IMPORTANT: REPLACE THIS WITH YOUR CLOUDFLARE WORKER URL !!!
         const WORKER_URL = "https://powa-vault.powwa.workers.dev";
@@ -663,29 +661,37 @@
             
             if (GAME_MODE === 'PILLARS') {
                 GAME_MODE = 'BULLETS';
-                modeBtn.innerText = "MODE: BULLETS (SURVIVAL)";
+                TARGET_SCORE = 90; // Goal is 90 seconds
+                
+                modeBtn.innerText = "MODE: SURVIVAL (HP x3)";
                 modeBtn.style.borderColor = "#ff0044";
                 modeBtn.style.color = "#ff0044";
                 modeBtn.style.boxShadow = "0 0 15px rgba(255, 0, 68, 0.2)";
                 
-                // Hide score-based UI immediately to show timer
+                // Hide standard score, Show Timer & HP
                 scoreCounter.style.display = 'none';
-                progressContainer.style.display = 'none';
-                survivalTimerEl.style.display = 'block';
-                hpDisplay.style.display = 'block';
+                progressContainer.style.display = 'none'; // Optional: Hide progress bar if you want pure timer
+                document.getElementById('survival-timer').style.display = 'block';
+                document.getElementById('hp-display').style.display = 'block';
                 
             } else {
                 GAME_MODE = 'PILLARS';
+                TARGET_SCORE = 70; // Classic goal
+                
                 modeBtn.innerText = "MODE: PILLARS";
                 modeBtn.style.borderColor = "#bd00ff";
                 modeBtn.style.color = "#bd00ff";
                 modeBtn.style.boxShadow = "0 0 15px rgba(189, 0, 255, 0.2)";
                 
-                survivalTimerEl.style.display = 'none';
-                hpDisplay.style.display = 'none';
+                // Restore standard view
+                document.getElementById('survival-timer').style.display = 'none';
+                document.getElementById('hp-display').style.display = 'none';
+                scoreCounter.style.display = 'none'; 
                 progressContainer.style.display = 'flex';
             }
-            switchTab('daily');
+            
+            // Refresh Leaderboard Immediately
+            switchTab('daily'); 
         };
 
         function triggerShake() {
@@ -726,12 +732,6 @@
                 wrapper.style.boxShadow = `0 0 60px ${color}4d`;
                 wrapper.style.borderColor = color;
             }
-        }
-        
-        function updateTimerDisplay() {
-            let minutes = Math.floor(currentSurvivalTime / 60);
-            let seconds = Math.floor(currentSurvivalTime % 60);
-            survivalTimerEl.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
         }
         
         function updateHPDisplay() {
@@ -1155,6 +1155,14 @@
                             }
                         }
                     }
+                    
+                    // Score Counting (ONLY IF NOT IN BULLET MODE)
+                    // In Bullet Mode, score is handled by the timer
+                    if (b.x + b.w < player.x && !b.passed) {
+                        b.passed = true; 
+                        // We do NOT add score++ here for bullets anymore
+                        SFX.score();
+                    }
                 }
 
                 this.list = this.list.filter(b => b.x > -100);
@@ -1297,7 +1305,15 @@
             setTimeout(() => { bgWin.style.display = 'none'; }, 500);
 
             progressContainer.style.display = 'none';
-            scoreCounter.style.display = 'block';
+            
+            // SHOW CORRECT COUNTER
+            if (GAME_MODE === 'BULLETS') {
+                scoreCounter.style.display = 'none';
+                document.getElementById('survival-timer').style.display = 'block';
+            } else {
+                scoreCounter.style.display = 'block';
+                document.getElementById('survival-timer').style.display = 'none';
+            }
             scoreCounter.innerText = score;
             
             gameStartTime = Date.now();
@@ -1340,9 +1356,8 @@
             // RESET MODES
             if (GAME_MODE === 'BULLETS') {
                 player.hp = 3;
-                currentSurvivalTime = SURVIVAL_TIME_LIMIT;
+                document.getElementById('survival-timer').innerText = "0:00";
                 updateHPDisplay();
-                updateTimerDisplay();
             } else {
                 player.hp = 1;
             }
@@ -1415,20 +1430,26 @@
                 updateGalaxy();
             }
 
-            // SURVIVAL TIMER LOGIC
-            if (gameState === 'PLAY' && GAME_MODE === 'BULLETS' && frames % 60 === 0) {
-                currentSurvivalTime--;
-                updateTimerDisplay();
-                
-                // WIN CONDITION FOR SURVIVAL MODE
-                if (currentSurvivalTime <= 0) {
-                    // Set score to target so win logic works correctly
-                    score = TARGET_SCORE + 1; 
-                    winGame();
+            frames++;
+            
+            // --- SURVIVAL TIMER LOGIC (Count UP) ---
+            if (gameState === 'PLAY' && GAME_MODE === 'BULLETS') {
+                // Run this every 1 second (60 frames)
+                if (frames % 60 === 0) {
+                    score++; // Score = Seconds Survived
+                    
+                    // Format time (e.g. 1:30)
+                    let mins = Math.floor(score / 60);
+                    let secs = score % 60;
+                    document.getElementById('survival-timer').innerText = 
+                        `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                    
+                    // Win Condition at 90s
+                    if (!infiniteMode && score >= TARGET_SCORE) {
+                        winGame();
+                    }
                 }
             }
-
-            frames++;
 
             if (!timeStopActive) {
                 particles = particles.filter(p => { if(p.type==='dust') { p.x -= p.speed; if(p.x<0) p.x=width; return true; } p.x += p.vx; p.y += p.vy; p.life -= 0.03; return p.life > 0; });
@@ -1595,10 +1616,10 @@
             if(currentLeaderboardListener) currentLeaderboardListener(); 
 
             let base = "leaderboard";
-if (GAME_MODE === 'BULLETS') base = "leaderboard_survival";
+            if (GAME_MODE === 'BULLETS') base = "leaderboard_survival";
+    
+            const collectionName = (mode === 'daily') ? `${base}_${KEY_ID}` : base;
 
-const collectionName = (mode === 'daily') ? `${base}_${KEY_ID}` : base;
-            
             currentLeaderboardListener = db.collection(collectionName)
                 .orderBy("score", "desc")
                 .limit(10)
@@ -1664,15 +1685,15 @@ const collectionName = (mode === 'daily') ? `${base}_${KEY_ID}` : base;
                 if(nameInput) nameInput.disabled = true;
             }
 
-           let base = "leaderboard";
-if (GAME_MODE === 'BULLETS') base = "leaderboard_survival";
+            let base = "leaderboard";
+            if (GAME_MODE === 'BULLETS') base = "leaderboard_survival";
 
-const dailyCollection = `${base}_${KEY_ID}`;
-
-Promise.all([
-    submitToCollection(base, name, scoreToSend),   
-    submitToCollection(dailyCollection, name, scoreToSend)
-]).then(() => {
+            const dailyCollection = `${base}_${KEY_ID}`;
+            
+            Promise.all([
+                submitToCollection(base, name, scoreToSend),   
+                submitToCollection(dailyCollection, name, scoreToSend)
+            ]).then(() => {
                 if(submitBtn) {
                     submitBtn.innerText = "SENT!";
                     submitBtn.style.background = "#333";
@@ -1697,4 +1718,3 @@ Promise.all([
     </script>
 </body>
 </html>
-
