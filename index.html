@@ -84,26 +84,6 @@
             transform: skew(-5deg);
         }
         
-        /* HP DISPLAY */
-        #hp-display {
-            display: none;
-            font-size: 2rem;
-            color: #ff0044;
-            text-shadow: 0 0 10px #ff0044;
-            margin-right: 10px;
-        }
-        
-        /* TIMER DISPLAY (COUNT UP) */
-        #survival-timer {
-            display: none;
-            font-size: 2.5rem;
-            color: #ffff00;
-            text-shadow: 0 0 15px #ffaa00;
-            font-family: monospace;
-            letter-spacing: -2px;
-            transition: color 0.2s;
-        }
-
         #main-menu {
             position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
             text-align: center; width: 100%; pointer-events: auto; z-index: 20;
@@ -298,14 +278,14 @@
             <div id="countdown" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:8rem; color:#fff; text-shadow:0 0 40px #00ffff; z-index:100; font-family:'Russo One'; pointer-events:none;">3</div>
             
             <div id="top-bar">
-                <div id="hp-display">♥♥♥</div> <div id="progress-container">
+                <div id="progress-container">
                     <div id="progress-bar">
                         <div id="progress-fill"></div>
                     </div>
                 </div>
                 
-                <div id="score-counter">30</div>
-                <div id="survival-timer">0:00</div> </div>
+                <div id="score-counter">0</div>
+            </div>
 
             <div id="main-menu">
                 <h1 id="title" class="glitch-anim">POWA<br>PROXY</h1>
@@ -390,8 +370,6 @@
         const progressContainer = document.getElementById('progress-container');
         const progressFill = document.getElementById('progress-fill');
         const scoreCounter = document.getElementById('score-counter');
-        const hpDisplay = document.getElementById('hp-display');
-        const survivalTimerEl = document.getElementById('survival-timer');
         const wrapper = document.getElementById('game-container-box');
         const flashOverlay = document.getElementById('flash-overlay');
         const warpOverlay = document.getElementById('warp-overlay');
@@ -412,6 +390,10 @@
         const width = LOGICAL_WIDTH;
         const height = LOGICAL_HEIGHT;
 
+        // GEOMETRY DASH CONSTANTS
+        const FLOOR_HEIGHT = 100;
+        let activeFloorY = LOGICAL_HEIGHT - FLOOR_HEIGHT;
+
         function resize() {
             let winW = window.innerWidth;
             let winH = window.innerHeight;
@@ -425,6 +407,8 @@
             wrapper.style.height = finalH + "px";
             canvas.width = LOGICAL_WIDTH;
             canvas.height = LOGICAL_HEIGHT;
+            
+            activeFloorY = LOGICAL_HEIGHT - FLOOR_HEIGHT;
         }
         window.addEventListener('resize', resize);
         resize();
@@ -433,9 +417,8 @@
         const KEY_ID = "day_14"; 
         const KEY_WARNING_MODE = "OFF"; 
         
-        let GAME_MODE = 'PILLARS'; // 'PILLARS' or 'BULLETS'
+        let GAME_MODE = 'PILLARS'; // 'PILLARS' or 'GEOMETRY'
         
-        // !!! IMPORTANT: REPLACE THIS WITH YOUR CLOUDFLARE WORKER URL !!!
         const WORKER_URL = "https://powa-vault.powwa.workers.dev";
 
         let TARGET_SCORE = 70; 
@@ -445,7 +428,6 @@
         let GAP = 170; 
         let PERF_MODE = false;
 
-        // --- NEW: GAME START TIME FOR ANTI-CHEAT ---
         let gameStartTime = 0;
 
         // --- STORAGE & PERSISTENCE CHECK ---
@@ -529,12 +511,9 @@
         BGM.loop = true;
         BGM.volume = 0.6;
         
-        // --- NEW VARIABLES ---
         let timeStopActive = false;
         let timeStopTimer = 0;
-        let bulletsDodgedCount = 0; // NEW: Track dodges to limit "PASS" text freq
         
-        // --- LEVEL 1 LIMITS ---
         let level1ShieldCount = 0;
         let level1ClockCount = 0;
 
@@ -656,32 +635,30 @@
             e.stopPropagation();
             
             if (GAME_MODE === 'PILLARS') {
-                GAME_MODE = 'BULLETS';
-                TARGET_SCORE = 90; // Goal is 90 seconds
+                GAME_MODE = 'GEOMETRY';
+                TARGET_SCORE = 100; // Increased score target for runner mode
+                GRAVITY = 0.9; // Heavier physics
+                JUMP = 13.5;   // Higher jump
                 
-                modeBtn.innerText = "MODE: SEX PISTOLS (HP x3)"; // JOJO REFERENCE
-                modeBtn.style.borderColor = "#ff0044";
-                modeBtn.style.color = "#ff0044";
-                modeBtn.style.boxShadow = "0 0 15px rgba(255, 0, 68, 0.2)";
+                modeBtn.innerText = "MODE: GEOMETRY";
+                modeBtn.style.borderColor = "#ffff00";
+                modeBtn.style.color = "#ffff00";
+                modeBtn.style.boxShadow = "0 0 15px rgba(255, 255, 0, 0.2)";
                 
-                // Hide standard score, Show Timer & HP
-                scoreCounter.style.display = 'none';
-                progressContainer.style.display = 'none'; // Optional: Hide progress bar if you want pure timer
-                document.getElementById('survival-timer').style.display = 'block';
-                document.getElementById('hp-display').style.display = 'block';
+                scoreCounter.style.display = 'block'; 
+                progressContainer.style.display = 'flex';
                 
             } else {
                 GAME_MODE = 'PILLARS';
-                TARGET_SCORE = 70; // Classic goal
+                TARGET_SCORE = 70; 
+                GRAVITY = 0.6; 
+                JUMP = 8.5;
                 
                 modeBtn.innerText = "MODE: PILLARS";
                 modeBtn.style.borderColor = "#bd00ff";
                 modeBtn.style.color = "#bd00ff";
                 modeBtn.style.boxShadow = "0 0 15px rgba(189, 0, 255, 0.2)";
                 
-                // Restore standard view
-                document.getElementById('survival-timer').style.display = 'none';
-                document.getElementById('hp-display').style.display = 'none';
                 scoreCounter.style.display = 'none'; 
                 progressContainer.style.display = 'flex';
             }
@@ -728,12 +705,6 @@
                 wrapper.style.boxShadow = `0 0 60px ${color}4d`;
                 wrapper.style.borderColor = color;
             }
-        }
-        
-        function updateHPDisplay() {
-            let hpStr = "";
-            for(let i=0; i<player.hp; i++) hpStr += "♥";
-            hpDisplay.innerText = hpStr;
         }
 
         // --- GALAXY ---
@@ -790,8 +761,8 @@
         const player = {
             x: 60, y: 200, size: 32, velocity: 0, rotation: 0,
             hasShield: false,
-            hp: 1, // Default HP
-            invincible: 0, // Timer for I-frames
+            hp: 1, 
+            invincible: 0, 
             
             update: function() {
                 this.velocity += GRAVITY;
@@ -799,14 +770,33 @@
                 
                 if (this.invincible > 0) this.invincible--;
                 
-                if(frames % 2 === 0 && gameState === 'PLAY') {
-                    trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0});
-                    if(trail.length > 12) trail.shift();
+                // --- GEOMETRY DASH PHYSICS ---
+                if (GAME_MODE === 'GEOMETRY') {
+                    // Floor Collision
+                    if (this.y + this.size/2 >= activeFloorY) {
+                        this.y = activeFloorY - this.size/2;
+                        this.velocity = 0;
+                        
+                        // Snap rotation to nearest 90 degrees when on ground
+                        let rem = this.rotation % 90;
+                        if(rem > 45) this.rotation += (90 - rem) * 0.2;
+                        else this.rotation -= rem * 0.2;
+                    } else {
+                        // Rotate constantly while in air
+                        this.rotation += 6;
+                    }
+                } 
+                // --- PILLARS PHYSICS ---
+                else {
+                    if(frames % 2 === 0 && gameState === 'PLAY') {
+                        trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0});
+                        if(trail.length > 12) trail.shift();
+                    }
+                    if(gameState === 'PLAY') this.rotation += 4 + (SPEED * 0.5); 
                 }
-                if(gameState === 'PLAY') this.rotation += 4 + (SPEED * 0.5); 
             },
+
             draw: function() {
-                // Blink if invincible
                 if (this.invincible > 0 && Math.floor(frames / 4) % 2 === 0) return;
                 
                 for(let t of trail) {
@@ -816,8 +806,7 @@
                 ctx.save(); ctx.translate(this.x+this.size/2, this.y+this.size/2); ctx.rotate(this.rotation*Math.PI/180);
                 if(!PERF_MODE) { ctx.shadowBlur=20; ctx.shadowColor=`hsl(${globalHue}, 100%, 50%)`; }
                 
-                // Color change based on mode/hp
-                ctx.fillStyle = (GAME_MODE === 'BULLETS' && this.hp <= 1) ? "#ff0044" : "#000"; 
+                ctx.fillStyle = "#000"; 
                 
                 ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
                 ctx.lineWidth=3; ctx.strokeStyle="#fff"; ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
@@ -863,7 +852,6 @@
                     let anomalyDir = Math.random() < 0.5 ? 1 : -1;
                     let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
                     
-                    // --- SPAWN LOGIC ---
                     let spawnType = null;
                     if (!infiniteMode && level1ShieldCount < 2 && Math.random() < 0.1 && !player.hasShield) {
                         spawnType = 'SHIELD'; level1ShieldCount++;
@@ -890,7 +878,6 @@
                         isAnomaly: forceStatic ? false : isAnomaly,     
                         anomalySpeed: forceStatic ? 0 : anomalySpeed, 
                         
-                        // --- TRAP & BREATHING LOGIC ---
                         centerY: centerY,
                         breathSpeed: 0.03 + Math.random() * 0.05,
                         breathPhase: Math.random() * Math.PI * 2,
@@ -905,40 +892,24 @@
                 for(let p of this.list) {
                     p.x -= SPEED;
                     
-                    // FREEZE HAZARDS IF TIME STOP IS ACTIVE
                     if (!timeStopActive) {
-                        
                         if (p.isAnomaly) {
-                            // --- ANOMALY (Elevator) ---
                             p.top += p.anomalySpeed;
                             p.bottom -= p.anomalySpeed; 
                             if(p.top < 40 || p.top > height - GAP - 40) p.anomalySpeed *= -1;
                         } else {
-                            // --- STANDARD & TRAP LOGIC ---
-                            
-                            // 1. Calculate Base Sine Wave Gap
                             let wave = Math.sin(frames * p.breathSpeed + p.breathPhase);
                             let currentGap = 170 + (wave * p.breathAmp);
-                            
-                            // 2. TRAP LOGIC: Proximity Squeeze
                             if (p.isTrap) {
                                 let distToPlayer = p.x - player.x;
-                                
-                                // If player is approaching (within 300px) and hasn't passed
                                 if (distToPlayer < 300 && distToPlayer > -50) {
-                                    // Calculate "Panic Squeeze"
                                     let panicFactor = (300 - distToPlayer) * 0.35; 
                                     currentGap -= panicFactor;
                                 }
                             }
-
-                            // 3. Absolute Safety Clamp
                             if (currentGap < 90) currentGap = 90;
-                            
-                            // 4. Apply Gap
                             p.top = p.centerY - (currentGap / 2);
                             p.bottom = height - (p.centerY + (currentGap / 2));
-                            
                             if (p.top < 10) p.top = 10;
                             if (p.bottom < 10) p.bottom = 10;
                         }
@@ -987,10 +958,8 @@
 
                 for(let p of this.list) {
                     let warningColor = p.isAnomaly && (frames % 20 < 10) ? "#ff0000" : mainColor;
-                    
                     let isActiveTrap = p.isTrap && (p.x - player.x < 300) && (p.x - player.x > -50);
                     let trapColor = isActiveTrap ? "#ffaa00" : mainColor; 
-                    
                     let activeColor = p.isAnomaly ? warningColor : trapColor;
                     if (p.hasBeenHit) activeColor = "#555";
 
@@ -1065,173 +1034,126 @@
             }
         };
         
-        const bulletManager = {
+        // --- REPLACED BULLET MANAGER WITH GEOMETRY MANAGER ---
+        const geometryManager = {
             list: [],
-            timer: 0,
+            spawnTimer: 0,
             
             update: function() {
-                // SPAWN LOGIC - MISTA'S CURSE (FASTER ON 4)
-                let baseRate = Math.max(5, 15 - Math.floor(score / 5)); 
+                this.spawnTimer++;
                 
-                // MISTA'S CURSE: If timer has '4', spawn insanely fast
-                if (score.toString().includes('4')) baseRate = 5; 
-                
-                this.timer++;
-                
-                if (this.timer >= baseRate) {
-                    this.timer = 0;
-                    
-                    // Spawn random amounts (1 to 3 bullets at once)
-                    let count = Math.floor(Math.random() * 2) + 1;
-                    
-                    for(let i=0; i<count; i++) {
-                        let yPos = Math.random() * (height - 50) + 25;
-                        
-                        let type = 'STRAIGHT';
-                        let rand = Math.random();
-                        if (rand > 0.7) type = 'WAVE';
-                        if (rand > 0.9) type = 'TARGET';
+                let rate = 90;
+                if (score > 10) rate = 70;
+                if (score > 30) rate = 50;
+                if (score > 60) rate = 40;
 
-                        let baseSpeed = SPEED * 1.5 + (Math.random() * 5); // Faster base speed
-
-                        this.list.push({
-                            x: width + (i*50), // Stagger X slightly
-                            y: yPos,
-                            w: 30, h: 10,
-                            vx: -baseSpeed,
-                            vy: 0,
+                if (this.spawnTimer > rate) {
+                    this.spawnTimer = 0;
+                    
+                    let type = Math.random() > 0.5 ? 'SPIKE' : 'BLOCK';
+                    
+                    // Creates patterns at higher scores
+                    if (score > 20 && Math.random() > 0.7) {
+                        // Double Spike
+                        this.list.push({ x: width, y: activeFloorY, w: 30, h: 30, type: 'SPIKE', passed: false });
+                        this.list.push({ x: width + 35, y: activeFloorY, w: 30, h: 30, type: 'SPIKE', passed: false });
+                    } else {
+                        // Single Obstacle
+                        this.list.push({ 
+                            x: width, 
+                            y: activeFloorY, 
+                            w: 40, 
+                            h: type === 'SPIKE' ? 40 : 40, 
                             type: type,
-                            passed: false,
-                            startY: yPos,
-                            waveOffset: Math.random() * 10,
-                            trail: [] // NEW: Trail array
+                            passed: false 
                         });
                     }
                 }
 
-                // 2. MOVEMENT & COLLISION
                 for (let b of this.list) {
-                    // NEW: RECORD TRAIL POSITION BEFORE MOVE
-                    if(!PERF_MODE) {
-                        b.trail.push({x: b.x, y: b.y});
-                        if (b.trail.length > 10) b.trail.shift(); // Max trail length
-                    }
+                    b.x -= SPEED;
 
-                    b.x += b.vx;
+                    // HITBOX LOGIC
+                    let hit = false;
+                    let pPad = 8; 
 
-                    if (b.type === 'WAVE') {
-                        b.y = b.startY + Math.sin((frames * 0.1) + b.waveOffset) * 60;
-                    } 
-                    else if (b.type === 'TARGET') {
-                        if (b.y < player.y) b.y += 1.5;
-                        else b.y -= 1.5;
-                    }
-
-                    // Collision Logic with Invincibility check
-                    let pad = 6;
-                    if (
-                        player.x + pad < b.x + b.w &&
-                        player.x + player.size - pad > b.x &&
-                        player.y + pad < b.y + b.h &&
-                        player.y + player.size - pad > b.y
-                    ) {
-                        // Check Shield First
-                        if (player.hasShield) {
-                            player.hasShield = false;
-                            b.x = -100; 
-                            SFX.shieldBreak();
-                            player.invincible = 60; // 1 sec I-frame on shield break too
-                            triggerShake();
-                            if(!PERF_MODE) floatTexts.push({text: "SHIELD BROKEN", x: player.x, y: player.y-40, life: 1.5, vy: -1});
+                    if (b.type === 'SPIKE') {
+                        // Triangle Hitbox (simplified)
+                        if (player.x + pPad < b.x + b.w/2 + 10 &&
+                            player.x + player.size - pPad > b.x + b.w/2 - 10 &&
+                            player.y + player.size - pPad > b.y - b.h + 10) {
+                            hit = true;
                         }
-                        // Then Check HP
-                        else if (player.invincible <= 0) {
-                            player.hp--;
-                            updateHPDisplay();
-                            b.x = -100; // Bullet disappears on hit
-                            
-                            if (player.hp <= 0) {
-                                die();
-                            } else {
-                                // Survivable Hit
-                                SFX.hurt();
-                                player.invincible = 120; // 2 Seconds I-frames
-                                triggerShake();
-                                if(!PERF_MODE) floatTexts.push({text: "-1 HP", x: player.x, y: player.y-40, life: 1.5, vy: -1, color:"#ff0000"});
-                                flashScreen();
-                            }
+                    } else {
+                        // Block Hitbox (AABB)
+                        if (player.x + pPad < b.x + b.w &&
+                            player.x + player.size - pPad > b.x &&
+                            player.y + player.size - pPad > b.y - b.h) {
+                            hit = true;
+                        }
+                    }
+
+                    if (hit) {
+                        if (player.hasShield) {
+                             player.hasShield = false;
+                             b.x = -200; 
+                             SFX.shieldBreak();
+                             triggerShake();
+                        } else {
+                             die();
                         }
                     }
                     
-                    // Dodge Logic ("PASS!")
                     if (b.x + b.w < player.x && !b.passed) {
                         b.passed = true; 
+                        score++;
                         SFX.score();
-                        bulletsDodgedCount++; // NEW: Increment Dodge Counter
                         
-                        // NEW: "PASS! PASS! PASS!" effect ONLY EVERY 5 DODGES
-                        if (!PERF_MODE && bulletsDodgedCount % 5 === 0) {
-                            floatTexts.push({
-                                text: "PASS!", 
-                                x: player.x, 
-                                y: player.y - 30, 
-                                life: 1.0, 
-                                vy: -1, 
-                                color: "#ffff00" 
-                            });
-                        }
+                        if(infiniteMode) scoreCounter.innerText = score;
+                        else updateProgress();
+
+                        switchBiome();
+                        if (!infiniteMode && score >= TARGET_SCORE) winGame();
                     }
                 }
-
                 this.list = this.list.filter(b => b.x > -100);
             },
 
             draw: function() {
+                // Draw The Floor Line
+                ctx.fillStyle = "#fff";
+                ctx.fillRect(0, activeFloorY, width, 4);
+
                 for (let b of this.list) {
-                    // STAND COLORS: Default Orange, No.1 Yellow, Target Red
-                    let color = "#ffaa00"; 
-                    if (b.type === 'WAVE') color = "#ffff00"; 
-                    if (b.type === 'TARGET') color = "#ff0044"; 
+                    ctx.shadowBlur = 15;
                     
-                    if (PERF_MODE) {
-                        ctx.fillStyle = color;
+                    if (b.type === 'SPIKE') {
+                        ctx.fillStyle = "#ff0044"; 
+                        ctx.shadowColor = "#ff0044";
                         ctx.beginPath();
-                        ctx.fillRect(b.x, b.y, b.w, b.h);
+                        ctx.moveTo(b.x, b.y); // Bottom Left
+                        ctx.lineTo(b.x + b.w/2, b.y - b.h); // Top Middle
+                        ctx.lineTo(b.x + b.w, b.y); // Bottom Right
+                        ctx.fill();
+                        
+                        // Inner Detail
+                        ctx.fillStyle = "#ffaa00";
+                        ctx.beginPath();
+                        ctx.moveTo(b.x + 10, b.y); 
+                        ctx.lineTo(b.x + b.w/2, b.y - b.h + 15); 
+                        ctx.lineTo(b.x + b.w - 10, b.y); 
+                        ctx.fill();
                     } else {
-                        // NEW: DRAW TRAIL
-                        for (let i = 0; i < b.trail.length; i++) {
-                            let t = b.trail[i];
-                            let alpha = (i / b.trail.length) * 0.4; 
-                            ctx.fillStyle = color;
-                            ctx.globalAlpha = alpha;
-                            ctx.fillRect(t.x, t.y, b.w, b.h);
-                        }
-                        ctx.globalAlpha = 1.0;
-
-                        // 1. Draw Body
-                        ctx.fillStyle = color;
-                        ctx.shadowBlur = 10;
-                        ctx.shadowColor = color;
-                        ctx.beginPath();
-                        ctx.roundRect(b.x, b.y, b.w, b.h, 5);
-                        ctx.fill();
+                        ctx.fillStyle = "#00ffff"; 
+                        ctx.shadowColor = "#00ffff";
+                        ctx.fillRect(b.x, b.y - b.h, b.w, b.h);
                         
-                        // 2. Draw "Sex Pistol" Eye
-                        ctx.shadowBlur = 0;
-                        ctx.fillStyle = "#fff"; // White
-                        ctx.beginPath();
-                        ctx.arc(b.x + 5, b.y + 4, 3, 0, Math.PI*2);
-                        ctx.fill();
-                        
-                        ctx.fillStyle = "#000"; // Pupil
-                        ctx.beginPath();
-                        ctx.arc(b.x + 4, b.y + 4, 1.5, 0, Math.PI*2);
-                        ctx.fill();
-
-                        // 3. Trail Line (The old subtle one, kept for style)
-                        ctx.fillStyle = "rgba(255,255,255,0.3)";
-                        ctx.fillRect(b.x + 10, b.y + 2, b.w, 2);
+                        // Inner Detail
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = "#fff";
+                        ctx.strokeRect(b.x, b.y - b.h, b.w, b.h);
                     }
+                    ctx.shadowBlur = 0;
                 }
             }
         };
@@ -1350,14 +1272,7 @@
 
             progressContainer.style.display = 'none';
             
-            // SHOW CORRECT COUNTER
-            if (GAME_MODE === 'BULLETS') {
-                scoreCounter.style.display = 'none';
-                document.getElementById('survival-timer').style.display = 'block';
-            } else {
-                scoreCounter.style.display = 'block';
-                document.getElementById('survival-timer').style.display = 'none';
-            }
+            scoreCounter.style.display = 'block';
             scoreCounter.innerText = score;
             
             gameStartTime = Date.now();
@@ -1378,7 +1293,7 @@
                 } else {
                     clearInterval(timer);
                     countEl.style.display = 'none';
-                    player.velocity = -JUMP; 
+                    if(GAME_MODE !== 'GEOMETRY') player.velocity = -JUMP; 
                     gameState = 'PLAY';
                     MUSIC.resume();
                     playTone(800, 'square', 0.2, 0.1);
@@ -1396,16 +1311,16 @@
             score = 0; frames = 0;
             pipeSpawnCount = 0; 
             currentBiome = 0; 
-            bulletsDodgedCount = 0; // NEW: Reset dodge counter
             
             // RESET MODES
-            if (GAME_MODE === 'BULLETS') {
-                player.hp = 3;
-                document.getElementById('survival-timer').innerText = "0:00";
-                document.getElementById('survival-timer').style.color = "#ffff00"; // Reset Color
-                updateHPDisplay();
+            if (GAME_MODE === 'GEOMETRY') {
+                player.hp = 1;
+                activeFloorY = LOGICAL_HEIGHT - FLOOR_HEIGHT;
+                player.y = activeFloorY - player.size;
+                
             } else {
                 player.hp = 1;
+                player.y = height/2;
             }
             player.invincible = 0;
 
@@ -1430,12 +1345,12 @@
             wrapper.style.borderColor = "#fff";
             wrapper.style.boxShadow = "0 0 60px rgba(0,255,255,0.3)";
             
-            player.y = height/2; player.velocity = 0; player.rotation = 0;
+            player.velocity = 0; player.rotation = 0;
             player.hasShield = false; 
             hasShieldSpawned = false; 
             
             obstacles.list = []; 
-            bulletManager.list = [];
+            geometryManager.list = [];
             trail = []; shockwaves = []; floatTexts = []; items = [];
             
             initGalaxy(); initParticles();
@@ -1450,12 +1365,12 @@
             
             gameStartTime = Date.now();
             
-            if(infiniteMode && GAME_MODE === 'PILLARS') scoreCounter.style.display = 'block';
+            if(infiniteMode) scoreCounter.style.display = 'block';
             
             gameState = 'PLAY';
             MUSIC.play();
             document.getElementById('main-menu').style.display = 'none';
-            player.velocity = -JUMP;
+            if (GAME_MODE !== 'GEOMETRY') player.velocity = -JUMP;
         }
 
         function updatePhysics() {
@@ -1478,34 +1393,6 @@
 
             frames++;
             
-            // --- SURVIVAL TIMER LOGIC (Count UP) ---
-            if (gameState === 'PLAY' && GAME_MODE === 'BULLETS') {
-                // Run this every 1 second (60 frames)
-                if (frames % 60 === 0) {
-                    score++; // Score = Seconds Survived
-                    
-                    // --- MISTA'S CURSE: "4" IS UNLUCKY ---
-                    // If the time has a 4 in it, turn RED and SHAKE
-                    if (score.toString().includes('4')) {
-                        document.getElementById('survival-timer').style.color = "#ff0000"; 
-                        triggerShake();
-                    } else {
-                        document.getElementById('survival-timer').style.color = "#ffff00";
-                    }
-                    
-                    // Format time (e.g. 1:30)
-                    let mins = Math.floor(score / 60);
-                    let secs = score % 60;
-                    document.getElementById('survival-timer').innerText = 
-                        `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-                    
-                    // Win Condition at 90s
-                    if (!infiniteMode && score >= TARGET_SCORE) {
-                        winGame();
-                    }
-                }
-            }
-
             if (!timeStopActive) {
                 particles = particles.filter(p => { if(p.type==='dust') { p.x -= p.speed; if(p.x<0) p.x=width; return true; } p.x += p.vx; p.y += p.vy; p.life -= 0.03; return p.life > 0; });
             }
@@ -1540,7 +1427,7 @@
                 if (GAME_MODE === 'PILLARS') {
                     obstacles.update();
                 } else {
-                    bulletManager.update();
+                    geometryManager.update();
                 }
                 
                 player.update();
@@ -1601,7 +1488,7 @@
             if (GAME_MODE === 'PILLARS') {
                 obstacles.draw();
             } else {
-                bulletManager.draw();
+                geometryManager.draw();
             }
             
             if(gameState === 'PLAY' || gameState === 'DIE_ANIM' || gameState === 'WIN_PAUSE') player.draw();
@@ -1626,9 +1513,21 @@
             if(gameState === 'WIN_PAUSE') return;
             if(gameState === 'START') startGame();
             else if(gameState === 'PLAY') {
-                player.velocity = -JUMP; SFX.jump();
-                if(!PERF_MODE) {
-                    for(let i=0; i<5; i++) particles.push({type: 'explode', x: player.x, y: player.y+player.size, vx: (Math.random()-0.5)*5, vy: Math.random()*5, life: 0.5, color: '#fff', size: 3});
+                
+                if (GAME_MODE === 'GEOMETRY') {
+                    // ONLY JUMP IF ON GROUND
+                    if (player.y >= activeFloorY - player.size/2 - 5) {
+                        player.velocity = -JUMP; 
+                        SFX.jump();
+                        if(!PERF_MODE) {
+                             for(let i=0; i<5; i++) particles.push({type: 'dust', x: player.x, y: player.y+player.size/2, vx: (Math.random()-0.5)*5, vy: 0, life: 0.5, color: '#fff', size: 3});
+                        }
+                    }
+                } else {
+                    player.velocity = -JUMP; SFX.jump();
+                    if(!PERF_MODE) {
+                        for(let i=0; i<5; i++) particles.push({type: 'explode', x: player.x, y: player.y+player.size, vx: (Math.random()-0.5)*5, vy: Math.random()*5, life: 0.5, color: '#fff', size: 3});
+                    }
                 }
             }
         }
@@ -1671,7 +1570,7 @@
             if(currentLeaderboardListener) currentLeaderboardListener(); 
 
             let base = "leaderboard";
-            if (GAME_MODE === 'BULLETS') base = "leaderboard_survival";
+            if (GAME_MODE === 'GEOMETRY') base = "leaderboard_geometry";
     
             const collectionName = (mode === 'daily') ? `${base}_${KEY_ID}` : base;
 
@@ -1741,7 +1640,7 @@
             }
 
             let base = "leaderboard";
-            if (GAME_MODE === 'BULLETS') base = "leaderboard_survival";
+            if (GAME_MODE === 'GEOMETRY') base = "leaderboard_geometry";
 
             const dailyCollection = `${base}_${KEY_ID}`;
             
@@ -1765,7 +1664,6 @@
         initGalaxy(); initParticles(); resetLevel(); requestAnimationFrame(loop);
         switchTab('daily');
 
-        // CHECK WARNING MODE
         if (KEY_WARNING_MODE === "ON") {
             const warnBox = document.getElementById('key-warning');
             if(warnBox) warnBox.style.display = 'block';
