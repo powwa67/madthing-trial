@@ -684,7 +684,7 @@
         // --- GAME OBJECTS ---
         const player = {
             x: 60, y: 200, size: 36, velocity: 0, rotation: 0,
-            hasShield: false, 
+            shieldCount: 0, // NEW: Stackable Shields
             
             update: function() {
                 this.velocity += GRAVITY;
@@ -723,15 +723,23 @@
                 ctx.lineWidth=2; ctx.strokeStyle="#fff"; 
                 ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
                 
-                if(this.hasShield) {
+                // SHIELD DRAWING
+                if(this.shieldCount > 0) {
                     ctx.beginPath();
                     ctx.lineWidth = 3;
                     ctx.strokeStyle = `hsla(120, 100%, 70%, ${Math.abs(Math.sin(frames*0.1)) + 0.5})`;
-                    ctx.arc(0, 0, this.size * 0.8, 0, Math.PI*2);
+                    ctx.arc(0, 0, this.size * 0.8 + (this.shieldCount*2), 0, Math.PI*2);
                     ctx.stroke();
                 }
                 
                 ctx.restore(); ctx.shadowBlur=0;
+                
+                // DRAW SHIELD COUNT NUMBER
+                if(this.shieldCount > 0) {
+                    ctx.fillStyle = "#00ff00";
+                    ctx.font = "bold 16px monospace";
+                    ctx.fillText("x" + this.shieldCount, this.x + this.size/2, this.y - 10);
+                }
             }
         };
 
@@ -755,9 +763,9 @@
                     let centerY = topH + (GAP / 2);
 
                     let spawnType = null;
-                    if (!infiniteMode && level1ShieldCount < 2 && Math.random() < 0.1 && !player.hasShield) {
+                    if (!infiniteMode && level1ShieldCount < 2 && Math.random() < 0.1 && player.shieldCount === 0) {
                         spawnType = 'SHIELD'; level1ShieldCount++;
-                    } else if (infiniteMode && pipeSpawnCount % 25 === 0 && !player.hasShield) {
+                    } else if (infiniteMode && pipeSpawnCount % 25 === 0 && player.shieldCount < 3) {
                         spawnType = 'SHIELD';
                     }
                     if (!infiniteMode && score >= 30 && level1ClockCount < 2 && Math.random() < 0.15 && !timeStopActive) {
@@ -823,10 +831,13 @@
                        player.x + player.size - pad > p.x && 
                        (player.y + pad < p.top || player.y + player.size - pad > height - p.bottom)) {
                         
-                        if (player.hasShield) {
-                            player.hasShield = false; p.hasBeenHit = true; SFX.shieldBreak(); triggerShake();
+                        if (player.shieldCount > 0) {
+                            player.shieldCount--; 
+                            p.hasBeenHit = true; 
+                            SFX.shieldBreak(); 
+                            triggerShake();
                             if(!PERF_MODE) {
-                                floatTexts.push({text: "SHIELD CRACKED", x: player.x, y: player.y-40, life: 1.5, vy: -1});
+                                floatTexts.push({text: "SHIELD DOWN!", x: player.x, y: player.y-40, life: 1.5, vy: -1});
                                 for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#fff', size: 4});
                             }
                         } else {
@@ -855,7 +866,7 @@
                     let activeColor = "#fff";
                     // Color Logic for Traps/Anomalies
                     if (p.isAnomaly) activeColor = "#00ff00"; // Green Magic
-                    if (p.isTrap && (p.x - player.x < 300)) activeColor = "#ff0000"; // Red Warning
+                    if (p.isTrap) activeColor = "#ffaa00"; // ORANGE WARNING
                     if (p.hasBeenHit) activeColor = "#555";
 
                     if (era === 0) {
@@ -872,7 +883,9 @@
                             ctx.rect(p.x, height - p.bottom, p.w, p.bottom);
                             ctx.clip();
                             
+                            // IF TRAP, STRIPES ARE ORANGE
                             ctx.strokeStyle = (activeColor === "#fff") ? "#ff0000" : activeColor;
+                            
                             ctx.lineWidth = 15;
                             ctx.beginPath();
                             // OPTIMIZATION: Only draw lines visible on screen
@@ -1059,7 +1072,7 @@
             wrapper.style.borderColor = "#fff";
             
             player.y = height/2; player.velocity = 0; player.rotation = 0;
-            player.hasShield = false; 
+            player.shieldCount = 0; // RESET SHIELD STACK
             
             obstacles.list = []; trail = []; shockwaves = []; floatTexts = []; items = [];
             initWinter(); initParticles();
@@ -1120,9 +1133,9 @@
                 if(dist < 40 && !item.taken) {
                    item.taken = true;
                    if (item.type === 'SHIELD') {
-                       player.hasShield = true;
+                       player.shieldCount++; // ADD SHIELD CHARGE
                        SFX.shieldUp();
-                       if(!PERF_MODE) floatTexts.push({text: "SHIELDED!", x: player.x, y: player.y-40, life: 1.0, vy: -2});
+                       if(!PERF_MODE) floatTexts.push({text: "SHIELD +1", x: player.x, y: player.y-40, life: 1.0, vy: -2});
                    } else if (item.type === 'CLOCK') {
                        timeStopActive = true;
                        timeStopTimer = 60 * 5; 
