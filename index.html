@@ -3,705 +3,407 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PROTOCOL: BLACKOUT</title>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <title>GATE: LABYRINTH</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
     <style>
-        :root {
-            --term-green: #33ff00;
-            --term-red: #ff0000;
-            --term-dim: #1a331a;
-        }
-
         body {
             margin: 0;
-            background-color: #050505;
-            font-family: 'VT323', monospace;
+            background-color: #050510; /* Deep dungeon blue */
+            font-family: 'Rajdhani', sans-serif;
             overflow: hidden;
-            width: 100vw;
-            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            color: #fff;
             user-select: none;
-            cursor: none; /* Hide cursor for immersion */
         }
 
-        /* --- CRT / VHS EFFECTS --- */
-        #crt-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%;
-            pointer-events: none; z-index: 50;
-        }
-
-        #vignette {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(0,0,0,1) 95%);
-            pointer-events: none; z-index: 40;
-        }
-
-        #scanline {
-            width: 100%; height: 100px; z-index: 51;
-            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(33, 255, 33, 0.04) 50%, rgba(0,0,0,0) 100%);
-            opacity: 0.1; position: absolute; bottom: 100%; pointer-events: none;
-            animation: scanline 10s linear infinite;
-        }
-        @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100%; } }
-
-        /* --- GAME CONTAINER --- */
-        #game-container {
-            position: relative; width: 100%; height: 100%;
-            background: #000; overflow: hidden;
-        }
-
-        canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
-
-        /* --- UI ELEMENTS --- */
-        #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; padding: 20px; box-sizing: border-box;
-            display: flex; flex-direction: column; justify-content: space-between;
-            z-index: 60;
-        }
-
-        .hud-text {
-            color: var(--term-green); font-size: 1.5rem; text-shadow: 0 0 5px var(--term-green);
-            letter-spacing: 2px;
-        }
-
-        #noise-meter-box {
-            border: 1px solid #333; width: 200px; height: 10px; background: #111;
-            margin-top: 5px; position: relative;
-        }
-        #noise-bar { width: 0%; height: 100%; background: var(--term-red); transition: width 0.1s; }
-
-        #stamina-box {
-            border: 1px solid #333; width: 200px; height: 10px; background: #111;
-            margin-top: 5px; position: relative;
-        }
-        #stamina-bar { width: 100%; height: 100%; background: #00aaff; transition: width 0.1s; }
-
-        /* --- MENUS & MODALS --- */
-        #main-menu, #win-screen, #death-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 100;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            pointer-events: auto; cursor: default;
+        #game-ui {
+            position: absolute; top: 20px; left: 20px;
+            pointer-events: none; z-index: 10;
         }
 
         h1 {
-            color: #fff; font-size: 4rem; margin: 0; font-weight: normal;
-            text-shadow: 2px 0 var(--term-red), -2px 0 var(--term-green);
-            animation: glitch 1s infinite alternate;
+            margin: 0; color: #00aaff; text-shadow: 0 0 15px #00aaff;
+            font-size: 2rem; letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        #status {
+            color: #888; font-size: 1.2rem;
+        }
+
+        canvas {
+            display: block;
+            box-shadow: 0 0 50px rgba(0, 100, 255, 0.1);
+        }
+
+        /* --- MODALS --- */
+        .modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 5, 15, 0.95);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 20;
+            transition: opacity 0.3s;
         }
 
         .btn {
-            background: transparent; border: 2px solid var(--term-green); color: var(--term-green);
-            padding: 15px 40px; font-family: 'VT323', monospace; font-size: 1.8rem;
-            cursor: pointer; margin-top: 30px; transition: all 0.2s;
-            text-transform: uppercase; letter-spacing: 2px;
+            background: linear-gradient(45deg, #0055ff, #00aaff);
+            border: 1px solid #fff;
+            color: #fff;
+            padding: 15px 40px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 0 20px rgba(0, 170, 255, 0.4);
+            transition: transform 0.1s;
         }
-        .btn:hover { background: var(--term-green); color: #000; box-shadow: 0 0 20px var(--term-green); }
+        .btn:active { transform: scale(0.95); }
 
-        .key-display {
-            background: #111; border: 1px dashed var(--term-green); color: var(--term-green);
-            padding: 20px; font-size: 1.5rem; margin: 20px; max-width: 80%; word-break: break-all;
+        .key-box {
+            background: #001122; border: 1px dashed #00aaff;
+            padding: 15px; margin: 20px; font-family: monospace;
+            color: #00aaff; max-width: 90%; word-break: break-all;
             text-align: center;
-        }
-
-        /* --- ANIMATIONS --- */
-        @keyframes glitch {
-            0% { text-shadow: 2px 0 var(--term-red), -2px 0 var(--term-green); transform: skew(0deg); }
-            20% { text-shadow: 2px 0 var(--term-red), -2px 0 var(--term-green); transform: skew(0deg); }
-            21% { text-shadow: -2px 0 var(--term-green), 2px 0 var(--term-red); transform: skew(10deg); }
-            22% { text-shadow: 2px 0 var(--term-red), -2px 0 var(--term-green); transform: skew(0deg); }
-            100% { text-shadow: 2px 0 var(--term-red), -2px 0 var(--term-green); transform: skew(0deg); }
-        }
-
-        .jumpscare {
-            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-            transform: translate3d(0, 0, 0); backface-visibility: hidden;
-        }
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 0, 0); }
-            20%, 80% { transform: translate3d(2px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-            40%, 60% { transform: translate3d(4px, 0, 0); }
-        }
-
-        #flash-red {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: red; opacity: 0; pointer-events: none; z-index: 90;
-            mix-blend-mode: overlay; transition: opacity 0.1s;
         }
     </style>
 </head>
 <body>
 
-    <div id="crt-overlay"></div>
-    <div id="scanline"></div>
-    <div id="vignette"></div>
-    <div id="flash-red"></div>
+    <div id="game-ui">
+        <h1>System Dungeon</h1>
+        <div id="status">Floor: 1 // Time: 0s</div>
+    </div>
 
-    <div id="game-container">
-        <canvas id="gameCanvas"></canvas>
+    <canvas id="canvas"></canvas>
 
-        <div id="ui-layer">
-            <div>
-                <div class="hud-text">SIGNAL: <span id="noise-val">LOW</span></div>
-                <div id="noise-meter-box"><div id="noise-bar"></div></div>
-            </div>
-            
-            <div style="text-align: right;">
-                <div class="hud-text">SYSTEM STATUS</div>
-                <div style="font-size: 1rem; color: #555;">OBJ: LOCATE MASTER NODE</div>
-            </div>
+    <div id="start-modal" class="modal">
+        <h1 style="font-size: 4rem; margin-bottom: 10px;">GATE: LABYRINTH</h1>
+        <p style="color: #aaa; max-width: 400px; text-align: center;">
+            A C-Rank Dungeon has opened.<br>
+            Navigate the interference. Locate the <span style="color:#00aaff">Gate</span> to exit.
+        </p>
+        <button class="btn" onclick="initGame()">ENTER DUNGEON</button>
+    </div>
 
-            <div style="position: absolute; bottom: 20px; left: 20px;">
-                <div class="hud-text">STAMINA</div>
-                <div id="stamina-box"><div id="stamina-bar"></div></div>
-            </div>
-        </div>
-
-        <div id="main-menu">
-            <h1>PROTOCOL:<br>BLACKOUT</h1>
-            <p style="color: #666; font-size: 1.2rem; margin-top: -10px;">A SYSTEM RECOVERY OPERATION</p>
-            <div style="margin-top: 30px; color: #888; text-align: center;">
-                <p>WASD to Move | SHIFT to Run</p>
-                <p>Your light is your life. But it attracts <b>HIM</b>.</p>
-                <p>Find the Cyan Node. Don't let him touch you.</p>
-            </div>
-            <button class="btn" onclick="startGame()">INITIALIZE</button>
-        </div>
-
-        <div id="death-screen" style="display:none;">
-            <h1 style="color: red; text-shadow: 0 0 20px red;">CONNECTION LOST</h1>
-            <p style="color: #fff; font-size: 1.5rem;">THE PROXY CAUGHT YOU.</p>
-            <button class="btn" onclick="resetGame()">REBOOT SYSTEM</button>
-        </div>
-
-        <div id="win-screen" style="display:none;">
-            <h1 style="color: cyan; text-shadow: 0 0 20px cyan;">SYSTEM RESTORED</h1>
-            <p style="color: #fff;">ACCESS GRANTED. COPY YOUR KEY.</p>
-            
-            <div id="key-container" class="key-display">FETCHING FROM SERVER...</div>
-            
-            <button class="btn" onclick="copyToClip()">COPY KEY</button>
-            <button class="btn" onclick="resetGame()" style="border-color: #555; color: #555; margin-top: 10px;">RESTART</button>
-        </div>
+    <div id="win-modal" class="modal" style="display:none; opacity:0; pointer-events:none;">
+        <h1 style="color: #00aaff; font-size: 3rem;">DUNGEON CLEARED</h1>
+        <p>SYSTEM REWARD AVAILABLE</p>
+        <div id="key-display" class="key-box">CONNECTING TO SYSTEM...</div>
+        <button class="btn" onclick="copyKey()">COPY KEY</button>
+        <button class="btn" style="background:#333; border-color:#555; margin-top:10px;" onclick="initGame()">NEXT FLOOR</button>
     </div>
 
     <script>
-        // --- CONFIG & SETUP ---
-        const canvas = document.getElementById('gameCanvas');
+        // --- CONFIG ---
+        const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const noiseBar = document.getElementById('noise-bar');
-        const staminaBar = document.getElementById('stamina-bar');
-        const flashRed = document.getElementById('flash-red');
+        const WORKER_URL = "https://powa-vault.powwa.workers.dev"; // Your Worker
         
-        // --- SERVER CONFIG (REUSE YOUR WORKER URL) ---
-        const WORKER_URL = "https://powa-vault.powwa.workers.dev"; 
+        let COLS, ROWS;
+        const CELL_SIZE = 40; // Size of each corridor
+        const WALL_THICKNESS = 4;
         
-        let width, height;
+        let maze = [];
+        let stack = [];
+        let player = { col: 0, row: 0 };
+        let exit = { col: 0, row: 0 };
+        
+        let startTime = 0;
+        let gameActive = false;
+        let timerInterval;
+
+        // --- RESIZE ---
         function resize() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            // Calculate grid size based on screen
+            COLS = Math.floor(canvas.width / CELL_SIZE);
+            ROWS = Math.floor(canvas.height / CELL_SIZE);
+            // Ensure odd numbers for better walls if we did wall-grid, 
+            // but for cell-grid recursive backtracker, any size works.
         }
         window.addEventListener('resize', resize);
         resize();
 
-        // --- AUDIO ENGINE ---
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        let audioCtx = new AudioContext();
-        
-        function playSound(type, vol=0.1) {
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            
-            const now = audioCtx.currentTime;
-            
-            if (type === 'step') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(50 + Math.random()*20, now);
-                osc.frequency.exponentialRampToValueAtTime(10, now + 0.1);
-                gain.gain.setValueAtTime(vol, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now); osc.stop(now + 0.1);
-            }
-            else if (type === 'heartbeat') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(60, now);
-                gain.gain.setValueAtTime(vol * 2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-                osc.start(now); osc.stop(now + 0.2);
-            }
-            else if (type === 'drone') {
-                const bufferSize = audioCtx.sampleRate * 2.0;
-                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                
-                const noise = audioCtx.createBufferSource();
-                noise.buffer = buffer;
-                noise.loop = true;
-                
-                const biquadFilter = audioCtx.createBiquadFilter();
-                biquadFilter.type = "lowpass";
-                biquadFilter.frequency.value = 400;
-                
-                const droneGain = audioCtx.createGain();
-                droneGain.gain.value = 0.05;
-                
-                noise.connect(biquadFilter);
-                biquadFilter.connect(droneGain);
-                droneGain.connect(audioCtx.destination);
-                noise.start();
-                return { node: noise, gain: droneGain };
-            }
-            else if (type === 'scream') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(200, now);
-                osc.frequency.exponentialRampToValueAtTime(800, now + 0.5);
-                gain.gain.setValueAtTime(0, now);
-                gain.gain.linearRampToValueAtTime(vol, now + 0.1);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
-                
-                const wave = audioCtx.createWaveShaper();
-                wave.curve = makeDistortionCurve(400);
-                
-                osc.connect(wave);
-                wave.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start(now); osc.stop(now + 1);
-            }
-            else if (type === 'ping') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, now);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 1);
-                osc.start(now); osc.stop(now + 1);
-            }
-            
-            if (type !== 'drone') {
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-            }
-        }
-
-        function makeDistortionCurve(amount) {
-            let k = typeof amount === 'number' ? amount : 50,
-                n_samples = 44100,
-                curve = new Float32Array(n_samples),
-                deg = Math.PI / 180, i = 0, x;
-            for ( ; i < n_samples; ++i ) {
-                x = i * 2 / n_samples - 1;
-                curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
-            }
-            return curve;
-        }
-
-        let droneAudio = null;
-
-        // --- GAME STATE ---
-        let gameState = 'MENU'; 
-        const TILE_SIZE = 60;
-        const MAP_SIZE = 40; 
-        let map = []; 
-        let walls = [];
-        
-        const player = { x: 0, y: 0, angle: 0, speed: 3, runSpeed: 6, stamina: 100, noise: 0 };
-        const entity = { x: 0, y: 0, active: false, state: 'STALK', speed: 2.5, rage: 0, distance: 1000 };
-        const keyObj = { x: 0, y: 0, collected: false };
-        const keys = { w:false, a:false, s:false, d:false, Shift:false };
-        let mouseX = 0, mouseY = 0;
-
-        // --- MAP GENERATION (FIXED & SAFE) ---
-        function generateMap() {
-            // 1. Reset Map
-            map = new Array(MAP_SIZE).fill(0).map(() => new Array(MAP_SIZE).fill(1));
-            walls = [];
-
-            // 2. Random Walker
-            let x = Math.floor(MAP_SIZE/2);
-            let y = Math.floor(MAP_SIZE/2);
-            let steps = 800; 
-
-            player.x = x * TILE_SIZE + TILE_SIZE/2;
-            player.y = y * TILE_SIZE + TILE_SIZE/2;
-            
-            map[y][x] = 0;
-
-            for(let i=0; i<steps; i++) {
-                const dir = Math.floor(Math.random()*4);
-                if(dir===0) y--; else if(dir===1) x++;
-                else if(dir===2) y++; else if(dir===3) x--;
-
-                if(x<1) x=1; if(x>MAP_SIZE-2) x=MAP_SIZE-2;
-                if(y<1) y=1; if(y>MAP_SIZE-2) y=MAP_SIZE-2;
-
-                map[y][x] = 0;
+        // --- CELL CLASS ---
+        class Cell {
+            constructor(c, r) {
+                this.c = c;
+                this.r = r;
+                this.walls = [true, true, true, true]; // Top, Right, Bottom, Left
+                this.visited = false;
+                this.visible = false; // Fog of war
             }
 
-            // 3. Place Key (Safety Logic Added)
-            let placed = false;
-            let attempts = 0;
-            let requiredDist = 1000; 
+            draw(ctx) {
+                let x = this.c * CELL_SIZE;
+                let y = this.r * CELL_SIZE;
 
-            while(!placed && attempts < 200) {
-                attempts++;
-                let rx = Math.floor(Math.random()*MAP_SIZE);
-                let ry = Math.floor(Math.random()*MAP_SIZE);
-                
-                if (map[ry][rx] === 0) {
-                    let dist = Math.hypot((rx*TILE_SIZE) - player.x, (ry*TILE_SIZE) - player.y);
-                    if (dist > requiredDist) {
-                        keyObj.x = rx * TILE_SIZE + TILE_SIZE/2;
-                        keyObj.y = ry * TILE_SIZE + TILE_SIZE/2;
-                        placed = true;
-                    }
+                // Floor Color (Dark Blue/Grey)
+                if (this.visible) {
+                    ctx.fillStyle = "#0a0a1a";
+                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                } else {
+                    ctx.fillStyle = "#000"; // Pitch black if not seen
+                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    return; // Don't draw walls if not visible
                 }
-                if (attempts === 100) requiredDist = 500; 
+
+                // Walls (Neon Blue)
+                ctx.strokeStyle = "#0055aa";
+                ctx.lineWidth = WALL_THICKNESS;
+                ctx.lineCap = "round";
+
+                ctx.beginPath();
+                if (this.walls[0]) { ctx.moveTo(x, y); ctx.lineTo(x + CELL_SIZE, y); } // Top
+                if (this.walls[1]) { ctx.moveTo(x + CELL_SIZE, y); ctx.lineTo(x + CELL_SIZE, y + CELL_SIZE); } // Right
+                if (this.walls[2]) { ctx.moveTo(x + CELL_SIZE, y + CELL_SIZE); ctx.lineTo(x, y + CELL_SIZE); } // Bottom
+                if (this.walls[3]) { ctx.moveTo(x, y + CELL_SIZE); ctx.lineTo(x, y); } // Left
+                ctx.stroke();
             }
-            if (!placed) {
-                 keyObj.x = 5 * TILE_SIZE; keyObj.y = 5 * TILE_SIZE; map[5][5] = 0; 
+        }
+
+        // --- MAZE GENERATOR (Recursive Backtracker) ---
+        function index(c, r) {
+            if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return -1;
+            return c + r * COLS;
+        }
+
+        function removeWalls(a, b) {
+            let x = a.c - b.c;
+            if (x === 1) { a.walls[3] = false; b.walls[1] = false; }
+            if (x === -1) { a.walls[1] = false; b.walls[3] = false; }
+            let y = a.r - b.r;
+            if (y === 1) { a.walls[0] = false; b.walls[2] = false; }
+            if (y === -1) { a.walls[2] = false; b.walls[0] = false; }
+        }
+
+        function generateMaze() {
+            maze = [];
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    maze.push(new Cell(c, r));
+                }
             }
 
-            // 4. Populate Walls
-            for(let ry=0; ry<MAP_SIZE; ry++){
-                for(let rx=0; rx<MAP_SIZE; rx++){
-                    if(map[ry][rx] === 1) {
-                        walls.push({ x: rx*TILE_SIZE, y: ry*TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE });
-                    }
+            let current = maze[0];
+            current.visited = true;
+            stack = [current];
+
+            while (stack.length > 0) {
+                // Step 1: Get unvisited neighbors
+                let neighbors = [];
+                let top    = maze[index(current.c, current.r - 1)];
+                let right  = maze[index(current.c + 1, current.r)];
+                let bottom = maze[index(current.c, current.r + 1)];
+                let left   = maze[index(current.c - 1, current.r)];
+
+                if (top && !top.visited) neighbors.push(top);
+                if (right && !right.visited) neighbors.push(right);
+                if (bottom && !bottom.visited) neighbors.push(bottom);
+                if (left && !left.visited) neighbors.push(left);
+
+                if (neighbors.length > 0) {
+                    let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    removeWalls(current, next);
+                    next.visited = true;
+                    stack.push(current);
+                    current = next;
+                } else {
+                    current = stack.pop();
                 }
             }
             
-            // 5. Spawn Entity (Safety Logic Added)
-            let spawned = false;
-            attempts = 0;
-            requiredDist = 800;
+            // Set Player Start
+            player = { col: 0, row: 0 };
+            
+            // Set Exit (Furthest point usually, but let's just pick bottom right for simplicity)
+            exit = { col: COLS - 1, row: ROWS - 1 };
+        }
 
-            while(!spawned && attempts < 200) {
-                attempts++;
-                let ex = Math.floor(Math.random()*MAP_SIZE);
-                let ey = Math.floor(Math.random()*MAP_SIZE);
-                
-                if(map[ey][ex] === 0) {
-                    let d = Math.hypot((ex*TILE_SIZE) - player.x, (ey*TILE_SIZE) - player.y);
-                    if (d > requiredDist) {
-                        entity.x = ex * TILE_SIZE + TILE_SIZE/2;
-                        entity.y = ey * TILE_SIZE + TILE_SIZE/2;
-                        spawned = true;
+        // --- GAME LOGIC ---
+        function initGame() {
+            resize(); // Ensure grid fits screen
+            generateMaze();
+            
+            document.getElementById('start-modal').style.display = 'none';
+            document.getElementById('win-modal').style.opacity = '0';
+            document.getElementById('win-modal').style.pointerEvents = 'none';
+            
+            startTime = Date.now();
+            gameActive = true;
+            
+            if(timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                let s = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('status').innerText = `Floor: ${Math.floor(Math.random()*5)+1} // Time: ${s}s`;
+            }, 1000);
+
+            // Initial Visibility
+            updateVisibility();
+            draw();
+        }
+
+        function updateVisibility() {
+            // Reveal cells around player (Torch effect)
+            let range = 4;
+            for(let y = -range; y <= range; y++) {
+                for(let x = -range; x <= range; x++) {
+                    let idx = index(player.col + x, player.row + y);
+                    if(idx !== -1) {
+                        // Simple distance check for circle effect
+                        if(x*x + y*y <= range*range) {
+                            maze[idx].visible = true;
+                        }
                     }
                 }
-                if (attempts === 100) requiredDist = 400;
-            }
-            if (!spawned) {
-                entity.x = player.x + 200; entity.y = player.y;
             }
         }
 
-        // --- GAME LOOP ---
-        function startGame() {
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('death-screen').style.display = 'none';
-            document.getElementById('win-screen').style.display = 'none';
+        function movePlayer(dc, dr) {
+            if (!gameActive) return;
+
+            let currentCell = maze[index(player.col, player.row)];
+            let targetC = player.col + dc;
+            let targetR = player.row + dr;
+
+            // Check boundaries
+            if (targetC < 0 || targetR < 0 || targetC >= COLS || targetR >= ROWS) return;
+
+            // Check Walls
+            // 0:Top, 1:Right, 2:Bottom, 3:Left
+            if (dr === -1 && currentCell.walls[0]) return; // Moving Up, blocked
+            if (dc === 1  && currentCell.walls[1]) return; // Moving Right, blocked
+            if (dr === 1  && currentCell.walls[2]) return; // Moving Down, blocked
+            if (dc === -1 && currentCell.walls[3]) return; // Moving Left, blocked
+
+            player.col = targetC;
+            player.row = targetR;
             
-            if(!droneAudio) droneAudio = playSound('drone');
-            
-            gameState = 'PLAY';
-            generateMap();
-            player.stamina = 100;
-            entity.state = 'STALK';
-            entity.rage = 0;
-            
-            requestAnimationFrame(loop);
-        }
+            updateVisibility();
+            draw();
 
-        function resetGame() {
-             if(droneAudio) { droneAudio.node.stop(); droneAudio = null; }
-             document.getElementById('main-menu').style.display = 'flex';
-             document.getElementById('death-screen').style.display = 'none';
-             document.getElementById('win-screen').style.display = 'none';
-             gameState = 'MENU';
-        }
-
-        function update() {
-            if(gameState !== 'PLAY') return;
-
-            let moveSpeed = player.speed;
-            let isRunning = keys.Shift && player.stamina > 0;
-            
-            if(isRunning) {
-                moveSpeed = player.runSpeed;
-                player.stamina -= 0.5;
-                player.noise = Math.min(player.noise + 5, 100);
-            } else {
-                player.stamina = Math.min(player.stamina + 0.2, 100);
-                player.noise = Math.max(player.noise - 2, 0);
-            }
-
-            let dx = 0, dy = 0;
-            if(keys.w) dy -= moveSpeed;
-            if(keys.s) dy += moveSpeed;
-            if(keys.a) dx -= moveSpeed;
-            if(keys.d) dx += moveSpeed;
-
-            let newX = player.x + dx;
-            let newY = player.y + dy;
-            
-            if (!checkCollision(newX, player.y)) player.x = newX;
-            if (!checkCollision(player.x, newY)) player.y = newY;
-
-            if((dx !== 0 || dy !== 0) && Math.random() < (isRunning ? 0.1 : 0.05)) {
-                playSound('step', isRunning ? 0.3 : 0.1);
-            }
-
-            player.angle = Math.atan2(mouseY - height/2, mouseX - width/2);
-
-            // Entity Logic
-            let distToPlayer = Math.hypot(entity.x - player.x, entity.y - player.y);
-            entity.distance = distToPlayer;
-
-            if (distToPlayer < 400 && Math.random() < 0.05) playSound('heartbeat', 1 - (distToPlayer/400));
-            
-            if (entity.state === 'STALK') {
-                let angle = Math.atan2(player.y - entity.y, player.x - entity.x);
-                angle += (Math.random()-0.5); 
-                let speed = (player.noise > 50) ? 3.5 : 1.0;
-                
-                if (!checkCollision(entity.x + Math.cos(angle)*speed, entity.y)) entity.x += Math.cos(angle)*speed;
-                if (!checkCollision(entity.x, entity.y + Math.sin(angle)*speed)) entity.y += Math.sin(angle)*speed;
-
-                if (distToPlayer < 200) entity.state = 'CHASE';
-            }
-            else if (entity.state === 'CHASE') {
-                let angle = Math.atan2(player.y - entity.y, player.x - entity.x);
-                let speed = entity.speed + (entity.rage * 0.01);
-                entity.x += Math.cos(angle) * speed;
-                entity.y += Math.sin(angle) * speed;
-
-                if (distToPlayer < 30) gameOver();
-            }
-
-            let distKey = Math.hypot(keyObj.x - player.x, keyObj.y - player.y);
-            if (distKey < 40) {
-                playSound('ping');
+            // Win Condition
+            if (player.col === exit.col && player.row === exit.row) {
                 winGame();
             }
-
-            noiseBar.style.width = player.noise + "%";
-            staminaBar.style.width = player.stamina + "%";
-            noiseBar.style.backgroundColor = player.noise > 80 ? 'red' : '#33ff00';
-            document.getElementById('noise-val').innerText = player.noise > 80 ? "CRITICAL" : (player.noise > 40 ? "HIGH" : "LOW");
-        }
-
-        function checkCollision(x, y) {
-            let gx = Math.floor(x / TILE_SIZE);
-            let gy = Math.floor(y / TILE_SIZE);
-            if(map[gy][gx] === 1) return true;
-            return false;
         }
 
         function draw() {
             ctx.fillStyle = "#000";
-            ctx.fillRect(0, 0, width, height);
-            
-            ctx.save();
-            ctx.translate(width/2 - player.x, height/2 - player.y);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            let viewRange = 1000;
-            let startCol = Math.max(0, Math.floor((player.x - viewRange) / TILE_SIZE));
-            let endCol = Math.min(MAP_SIZE, Math.floor((player.x + viewRange) / TILE_SIZE));
-            let startRow = Math.max(0, Math.floor((player.y - viewRange) / TILE_SIZE));
-            let endRow = Math.min(MAP_SIZE, Math.floor((player.y + viewRange) / TILE_SIZE));
-
-            ctx.fillStyle = "#111";
-            for(let y=startRow; y<endRow; y++) {
-                for(let x=startCol; x<endCol; x++) {
-                    if(map[y][x] === 0) ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE+1, TILE_SIZE+1);
-                }
+            // Draw Maze
+            for (let i = 0; i < maze.length; i++) {
+                maze[i].draw(ctx);
             }
 
-            ctx.fillStyle = "#222";
-            ctx.shadowBlur = 0;
-            for(let y=startRow; y<endRow; y++) {
-                for(let x=startCol; x<endCol; x++) {
-                    if(map[y][x] === 1) {
-                        ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                        ctx.fillStyle = "#0a0a0a";
-                        ctx.fillRect(x*TILE_SIZE + 5, y*TILE_SIZE + 5, TILE_SIZE - 10, TILE_SIZE - 10);
-                        ctx.fillStyle = "#222";
-                    }
-                }
-            }
-
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = "#00ffff";
-            ctx.fillStyle = "#00ffff";
-            ctx.beginPath();
-            ctx.arc(keyObj.x, keyObj.y, 8 + Math.sin(Date.now()*0.01)*2, 0, Math.PI*2);
-            ctx.fill();
+            // Draw Player
+            let px = player.col * CELL_SIZE + CELL_SIZE/2;
+            let py = player.row * CELL_SIZE + CELL_SIZE/2;
             
-            ctx.font = "20px VT323";
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#00aaff";
             ctx.fillStyle = "#fff";
-            ctx.textAlign = "center";
-            ctx.fillText("MASTER NODE", keyObj.x, keyObj.y - 20);
-
-
-            let dx = entity.x - player.x;
-            let dy = entity.y - player.y;
-            let dist = Math.sqrt(dx*dx + dy*dy);
-            let angleToEntity = Math.atan2(dy, dx);
-            let angleDiff = angleToEntity - player.angle;
-            while(angleDiff > Math.PI) angleDiff -= Math.PI*2;
-            while(angleDiff < -Math.PI) angleDiff += Math.PI*2;
-            
-            let isLit = dist < 450 && Math.abs(angleDiff) < 0.6; 
-
-            if (isLit) {
-                entity.rage += 1;
-                if(entity.rage > 50) entity.state = 'CHASE';
-                
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = "red";
-                ctx.fillStyle = "#000";
-                ctx.beginPath();
-                ctx.arc(entity.x, entity.y, 20, 0, Math.PI*2);
-                ctx.fill();
-                
-                ctx.fillStyle = "red";
-                ctx.fillRect(entity.x - 8, entity.y - 5, 6, 6);
-                ctx.fillRect(entity.x + 2, entity.y - 5, 6, 6);
-                
-                if (Math.random() > 0.8) {
-                    ctx.fillStyle = "red";
-                    ctx.fillRect(entity.x - 15, entity.y - 20, 30, 40);
-                }
-            } else {
-                if (dist < 150) {
-                     ctx.fillStyle = "#050505";
-                     ctx.beginPath();
-                     ctx.arc(entity.x, entity.y, 20, 0, Math.PI*2);
-                     ctx.fill();
-                }
-            }
-
+            ctx.beginPath();
+            ctx.arc(px, py, CELL_SIZE/3, 0, Math.PI*2);
+            ctx.fill();
             ctx.shadowBlur = 0;
-            ctx.fillStyle = "#33ff00"; 
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, 10, 0, Math.PI*2);
-            ctx.fill();
 
-            ctx.restore();
-
-            // --- DARKNESS MASK ---
-            ctx.globalCompositeOperation = 'source-over';
-            let gx = width/2;
-            let gy = height/2;
-            
-            ctx.fillStyle = "rgba(0,0,0,0.98)"; 
-            
-            ctx.beginPath();
-            ctx.rect(0, 0, width, height); 
-            
-            ctx.arc(gx, gy, 40, 0, Math.PI*2, true);
-            
-            ctx.moveTo(gx, gy);
-            let coneDist = 450 + (Math.sin(Date.now()*0.02)*10); 
-            let coneWidth = 0.5; 
-            
-            let startAngle = player.angle - coneWidth;
-            let endAngle = player.angle + coneWidth;
-            
-            ctx.arc(gx, gy, coneDist, endAngle, startAngle, true);
-            
-            ctx.closePath();
-            ctx.fill();
-        }
-
-        function loop() {
-            if(gameState === 'PLAY') {
-                update();
-                draw();
-                requestAnimationFrame(loop);
+            // Draw Exit
+            // Only draw if visible or maybe always show it as a beacon? 
+            // Let's hide it in fog for difficulty.
+            let exitCell = maze[index(exit.col, exit.row)];
+            if (exitCell.visible) {
+                let ex = exit.col * CELL_SIZE + CELL_SIZE/2;
+                let ey = exit.row * CELL_SIZE + CELL_SIZE/2;
+                
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = "#ff0055";
+                ctx.fillStyle = "#ff0055";
+                ctx.beginPath();
+                ctx.rect(ex - 10, ey - 10, 20, 20);
+                ctx.fill();
+                ctx.shadowBlur = 0;
             }
         }
 
-        function gameOver() {
-            gameState = 'DEAD';
-            playSound('scream', 0.8);
-            flashRed.style.opacity = 1;
-            document.body.classList.add('jumpscare');
-            
-            setTimeout(() => {
-                flashRed.style.opacity = 0;
-                document.body.classList.remove('jumpscare');
-                document.getElementById('death-screen').style.display = 'flex';
-            }, 500);
-        }
-
+        // --- API & WIN ---
         async function winGame() {
-            gameState = 'WIN';
-            const winScreen = document.getElementById('win-screen');
-            winScreen.style.display = 'flex';
-            
-            const keyBox = document.getElementById('key-container');
-            keyBox.innerText = "DECRYPTING...";
-            keyBox.style.animation = "blink 0.5s infinite";
+            gameActive = false;
+            clearInterval(timerInterval);
 
+            let winModal = document.getElementById('win-modal');
+            winModal.style.display = 'flex';
+            // Slight delay for opacity transition
+            setTimeout(() => { 
+                winModal.style.opacity = '1'; 
+                winModal.style.pointerEvents = 'auto';
+            }, 50);
+
+            const keyBox = document.getElementById('key-display');
+            
             try {
+                // Fetch Key
                 const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         action: "GET_KEY",  
-                        score: 999, 
+                        score: 100, // Dummy score for maze completion
                         secret: "POWA_HANDSHAKE_v1",
-                        startTime: Date.now() - 60000 
+                        startTime: startTime
                     })
                 });
-                const data = await response.json();
 
+                const data = await response.json();
                 if (response.ok && data.key) {
                     keyBox.innerText = data.key;
-                    keyBox.style.color = "#33ff00"; 
-                    keyBox.style.animation = "none";
+                    keyBox.style.color = "#00ff00";
+                    keyBox.style.borderColor = "#00ff00";
                 } else {
-                    keyBox.innerText = data.error || "DECRYPTION FAILED";
-                    keyBox.style.color = "red";
+                    keyBox.innerText = "SYSTEM ERROR";
                 }
-            } catch (error) {
-                console.error(error);
-                keyBox.innerText = "SERVER UNREACHABLE";
-                keyBox.style.color = "red";
+            } catch (e) {
+                keyBox.innerText = "OFFLINE MODE";
             }
         }
         
-        function copyToClip() {
-            const txt = document.getElementById('key-container').innerText;
+        window.copyKey = function() {
+            let txt = document.getElementById('key-display').innerText;
             navigator.clipboard.writeText(txt);
-            alert("KEY COPIED TO CLIPBOARD");
-        }
+            alert("System Key Copied.");
+        };
 
-        window.addEventListener('keydown', e => {
-            if(keys.hasOwnProperty(e.key)) keys[e.key] = true;
-            if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true;
+        // --- CONTROLS ---
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' || e.key === 'w') movePlayer(0, -1);
+            if (e.key === 'ArrowRight' || e.key === 'd') movePlayer(1, 0);
+            if (e.key === 'ArrowDown' || e.key === 's') movePlayer(0, 1);
+            if (e.key === 'ArrowLeft' || e.key === 'a') movePlayer(-1, 0);
         });
-        window.addEventListener('keyup', e => {
-            if(keys.hasOwnProperty(e.key)) keys[e.key] = false;
-            if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false;
-        });
-        window.addEventListener('mousemove', e => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
+
+        // Touch Controls (Simple Tap quadrants)
+        window.addEventListener('touchstart', (e) => {
+            let touch = e.touches[0];
+            let cx = window.innerWidth / 2;
+            let cy = window.innerHeight / 2;
+            let x = touch.clientX;
+            let y = touch.clientY;
+            
+            if (Math.abs(x - cx) > Math.abs(y - cy)) {
+                // Horizontal
+                if (x > cx) movePlayer(1, 0); else movePlayer(-1, 0);
+            } else {
+                // Vertical
+                if (y > cy) movePlayer(0, 1); else movePlayer(0, -1);
+            }
         });
 
     </script>
