@@ -439,7 +439,7 @@
         const KEY_WARNING_MODE = "OFF"; 
         
         let GAME_MODE = 'PILLARS'; // 'PILLARS' or 'BULLETS'
-        let SURVIVAL_TIME_LIMIT = 300; // 5 Minutes in Seconds
+        let SURVIVAL_TIME_LIMIT = 90; // 5 Minutes in Seconds
         let currentSurvivalTime = SURVIVAL_TIME_LIMIT;
         
         // !!! IMPORTANT: REPLACE THIS WITH YOUR CLOUDFLARE WORKER URL !!!
@@ -685,6 +685,7 @@
                 hpDisplay.style.display = 'none';
                 progressContainer.style.display = 'flex';
             }
+            switchTab('daily');
         };
 
         function triggerShake() {
@@ -1593,8 +1594,11 @@
 
             if(currentLeaderboardListener) currentLeaderboardListener(); 
 
-            const collectionName = (mode === 'daily') ? `leaderboard_${KEY_ID}` : "leaderboard";
+            let base = "leaderboard";
+if (GAME_MODE === 'BULLETS') base = "leaderboard_survival";
 
+const collectionName = (mode === 'daily') ? `${base}_${KEY_ID}` : base;
+            
             currentLeaderboardListener = db.collection(collectionName)
                 .orderBy("score", "desc")
                 .limit(10)
@@ -1660,12 +1664,15 @@
                 if(nameInput) nameInput.disabled = true;
             }
 
-            const dailyCollection = `leaderboard_${KEY_ID}`;
-            
-            Promise.all([
-                submitToCollection("leaderboard", name, scoreToSend),   
-                submitToCollection(dailyCollection, name, scoreToSend)
-            ]).then(() => {
+           let base = "leaderboard";
+if (GAME_MODE === 'BULLETS') base = "leaderboard_survival";
+
+const dailyCollection = `${base}_${KEY_ID}`;
+
+Promise.all([
+    submitToCollection(base, name, scoreToSend),   
+    submitToCollection(dailyCollection, name, scoreToSend)
+]).then(() => {
                 if(submitBtn) {
                     submitBtn.innerText = "SENT!";
                     submitBtn.style.background = "#333";
@@ -1690,3 +1697,4 @@
     </script>
 </body>
 </html>
+
