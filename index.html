@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SHADOW RANKER: REFORGED</title>
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
     <style>
@@ -359,7 +359,8 @@
                     return;
                 }
 
-                let dist = player.x - this.x;
+                // FIXED REFERENCE HERE: playerObj instead of player
+                let dist = playerObj.x - this.x;
                 let absDist = Math.abs(dist);
 
                 // SEPARATION LOGIC (The Fix for Stacking)
@@ -394,8 +395,8 @@
                 if (this.state === 'ATTACK') {
                     this.stateTimer--;
                     if (this.stateTimer === 10) { // Hit frame
-                        if (Math.abs(player.x - this.x) < 70) {
-                            player.takeDamage(this.dmg, this.facing * 10);
+                        if (Math.abs(playerObj.x - this.x) < 70) {
+                            playerObj.takeDamage(this.dmg, this.facing * 10);
                             shake = 5;
                         }
                     }
@@ -595,15 +596,16 @@
                 spawnEnemy();
             }
 
-            // Enemy Update
-            enemies.forEach((e, i) => {
+            // Enemy Update & Safe Removal
+            enemies = enemies.filter(e => {
                 e.update();
                 if (e.hp <= 0) {
                     playerObj.xp += (e.type === 'TANK' ? 40 : 20);
                     if (playerObj.xp >= playerObj.maxXp) levelUp();
                     updateUI();
-                    enemies.splice(i, 1);
+                    return false; // Remove dead
                 }
+                return true;
             });
 
             if (playerObj.hp <= 0) {
