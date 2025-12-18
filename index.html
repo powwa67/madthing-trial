@@ -33,7 +33,8 @@
         /* --- CRT / VHS EFFECTS --- */
         #crt-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
             background-size: 100% 2px, 3px 100%;
             pointer-events: none; z-index: 50;
         }
@@ -173,7 +174,7 @@
             <div style="margin-top: 30px; color: #888; text-align: center;">
                 <p>WASD to Move | SHIFT to Run</p>
                 <p>Your light is your life. But it attracts <b>HIM</b>.</p>
-                <p>Find the Key. Don't let him touch you.</p>
+                <p>Find the Cyan Node. Don't let him touch you.</p>
             </div>
             <button class="btn" onclick="startGame()">INITIALIZE</button>
         </div>
@@ -204,7 +205,7 @@
         const flashRed = document.getElementById('flash-red');
         
         // --- SERVER CONFIG (REUSE YOUR WORKER URL) ---
-        const WORKER_URL = "https://powa-vault.powwa.workers.dev"; // <--- KEEP YOUR WORKER URL HERE
+        const WORKER_URL = "https://powa-vault.powwa.workers.dev"; 
         
         let width, height;
         function resize() {
@@ -220,7 +221,6 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
         
-        // Procedural Audio (No assets needed)
         function playSound(type, vol=0.1) {
             if(audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator();
@@ -244,7 +244,6 @@
                 osc.start(now); osc.stop(now + 0.2);
             }
             else if (type === 'drone') {
-                // Ambience
                 const bufferSize = audioCtx.sampleRate * 2.0;
                 const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const data = buffer.getChannelData(0);
@@ -254,7 +253,6 @@
                 noise.buffer = buffer;
                 noise.loop = true;
                 
-                // Lowpass filter for spooky wind
                 const biquadFilter = audioCtx.createBiquadFilter();
                 biquadFilter.type = "lowpass";
                 biquadFilter.frequency.value = 400;
@@ -276,7 +274,6 @@
                 gain.gain.linearRampToValueAtTime(vol, now + 0.1);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
                 
-                // Distortion
                 const wave = audioCtx.createWaveShaper();
                 wave.curve = makeDistortionCurve(400);
                 
@@ -286,7 +283,6 @@
                 osc.start(now); osc.stop(now + 1);
             }
             else if (type === 'ping') {
-                // Finding Key Sound
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(880, now);
                 gain.gain.setValueAtTime(0.1, now);
@@ -315,49 +311,28 @@
         let droneAudio = null;
 
         // --- GAME STATE ---
-        let gameState = 'MENU'; // MENU, PLAY, DEAD, WIN
+        let gameState = 'MENU'; 
         const TILE_SIZE = 60;
-        const MAP_SIZE = 40; // 40x40 grid
-        let map = []; // 1 = Wall, 0 = Floor
+        const MAP_SIZE = 40; 
+        let map = []; 
         let walls = [];
         
-        // Player
-        const player = {
-            x: 0, y: 0, 
-            angle: 0, 
-            speed: 3, 
-            runSpeed: 6,
-            stamina: 100,
-            noise: 0
-        };
-
-        // The Entity
-        const entity = {
-            x: 0, y: 0,
-            active: false,
-            state: 'STALK', // STALK, CHASE, COOLDOWN
-            speed: 2.5,
-            rage: 0,
-            distance: 1000
-        };
-        
-        // Objective
-        const keyObj = { x: 0, y: 0, collected: false, radius: 15 };
-        
-        // Inputs
+        const player = { x: 0, y: 0, angle: 0, speed: 3, runSpeed: 6, stamina: 100, noise: 0 };
+        const entity = { x: 0, y: 0, active: false, state: 'STALK', speed: 2.5, rage: 0, distance: 1000 };
+        const keyObj = { x: 0, y: 0, collected: false };
         const keys = { w:false, a:false, s:false, d:false, Shift:false };
         let mouseX = 0, mouseY = 0;
 
-        // --- MAP GENERATION (Random Walker) ---
+        // --- MAP GENERATION (FIXED & SAFE) ---
         function generateMap() {
-            // Fill with walls
+            // 1. Reset Map
             map = new Array(MAP_SIZE).fill(0).map(() => new Array(MAP_SIZE).fill(1));
             walls = [];
 
-            // Walker settings
+            // 2. Random Walker
             let x = Math.floor(MAP_SIZE/2);
             let y = Math.floor(MAP_SIZE/2);
-            let steps = 600;
+            let steps = 800; 
 
             player.x = x * TILE_SIZE + TILE_SIZE/2;
             player.y = y * TILE_SIZE + TILE_SIZE/2;
@@ -366,32 +341,40 @@
 
             for(let i=0; i<steps; i++) {
                 const dir = Math.floor(Math.random()*4);
-                if(dir===0) y--;
-                else if(dir===1) x++;
-                else if(dir===2) y++;
-                else if(dir===3) x--;
+                if(dir===0) y--; else if(dir===1) x++;
+                else if(dir===2) y++; else if(dir===3) x--;
 
-                // Clamp
                 if(x<1) x=1; if(x>MAP_SIZE-2) x=MAP_SIZE-2;
                 if(y<1) y=1; if(y>MAP_SIZE-2) y=MAP_SIZE-2;
 
                 map[y][x] = 0;
             }
 
-            // Place Key far away from player
+            // 3. Place Key (Safety Logic Added)
             let placed = false;
-            while(!placed) {
+            let attempts = 0;
+            let requiredDist = 1000; 
+
+            while(!placed && attempts < 200) {
+                attempts++;
                 let rx = Math.floor(Math.random()*MAP_SIZE);
                 let ry = Math.floor(Math.random()*MAP_SIZE);
-                let dist = Math.hypot((rx*TILE_SIZE) - player.x, (ry*TILE_SIZE) - player.y);
-                if (map[ry][rx] === 0 && dist > 1500) {
-                    keyObj.x = rx * TILE_SIZE + TILE_SIZE/2;
-                    keyObj.y = ry * TILE_SIZE + TILE_SIZE/2;
-                    placed = true;
+                
+                if (map[ry][rx] === 0) {
+                    let dist = Math.hypot((rx*TILE_SIZE) - player.x, (ry*TILE_SIZE) - player.y);
+                    if (dist > requiredDist) {
+                        keyObj.x = rx * TILE_SIZE + TILE_SIZE/2;
+                        keyObj.y = ry * TILE_SIZE + TILE_SIZE/2;
+                        placed = true;
+                    }
                 }
+                if (attempts === 100) requiredDist = 500; 
+            }
+            if (!placed) {
+                 keyObj.x = 5 * TILE_SIZE; keyObj.y = 5 * TILE_SIZE; map[5][5] = 0; 
             }
 
-            // Populate walls array for collision
+            // 4. Populate Walls
             for(let ry=0; ry<MAP_SIZE; ry++){
                 for(let rx=0; rx<MAP_SIZE; rx++){
                     if(map[ry][rx] === 1) {
@@ -400,17 +383,28 @@
                 }
             }
             
-            // Spawn Entity far away
+            // 5. Spawn Entity (Safety Logic Added)
             let spawned = false;
-            while(!spawned) {
+            attempts = 0;
+            requiredDist = 800;
+
+            while(!spawned && attempts < 200) {
+                attempts++;
                 let ex = Math.floor(Math.random()*MAP_SIZE);
                 let ey = Math.floor(Math.random()*MAP_SIZE);
-                let d = Math.hypot((ex*TILE_SIZE) - player.x, (ey*TILE_SIZE) - player.y);
-                if(map[ey][ex] === 0 && d > 1000) {
-                    entity.x = ex * TILE_SIZE + TILE_SIZE/2;
-                    entity.y = ey * TILE_SIZE + TILE_SIZE/2;
-                    spawned = true;
+                
+                if(map[ey][ex] === 0) {
+                    let d = Math.hypot((ex*TILE_SIZE) - player.x, (ey*TILE_SIZE) - player.y);
+                    if (d > requiredDist) {
+                        entity.x = ex * TILE_SIZE + TILE_SIZE/2;
+                        entity.y = ey * TILE_SIZE + TILE_SIZE/2;
+                        spawned = true;
+                    }
                 }
+                if (attempts === 100) requiredDist = 400;
+            }
+            if (!spawned) {
+                entity.x = player.x + 200; entity.y = player.y;
             }
         }
 
@@ -432,11 +426,7 @@
         }
 
         function resetGame() {
-             // Stop audio
-             if(droneAudio) {
-                 droneAudio.node.stop();
-                 droneAudio = null;
-             }
+             if(droneAudio) { droneAudio.node.stop(); droneAudio = null; }
              document.getElementById('main-menu').style.display = 'flex';
              document.getElementById('death-screen').style.display = 'none';
              document.getElementById('win-screen').style.display = 'none';
@@ -446,7 +436,6 @@
         function update() {
             if(gameState !== 'PLAY') return;
 
-            // 1. Player Movement
             let moveSpeed = player.speed;
             let isRunning = keys.Shift && player.stamina > 0;
             
@@ -465,38 +454,28 @@
             if(keys.a) dx -= moveSpeed;
             if(keys.d) dx += moveSpeed;
 
-            // Wall Collision
             let newX = player.x + dx;
             let newY = player.y + dy;
             
             if (!checkCollision(newX, player.y)) player.x = newX;
             if (!checkCollision(player.x, newY)) player.y = newY;
 
-            // Steps Audio
             if((dx !== 0 || dy !== 0) && Math.random() < (isRunning ? 0.1 : 0.05)) {
                 playSound('step', isRunning ? 0.3 : 0.1);
             }
 
-            // Angle
             player.angle = Math.atan2(mouseY - height/2, mouseX - width/2);
 
-            // 2. Entity AI
+            // Entity Logic
             let distToPlayer = Math.hypot(entity.x - player.x, entity.y - player.y);
             entity.distance = distToPlayer;
 
-            // "Heartbeat" Mechanic
             if (distToPlayer < 400 && Math.random() < 0.05) playSound('heartbeat', 1 - (distToPlayer/400));
             
-            // State Machine
             if (entity.state === 'STALK') {
-                // Move slowly towards player
                 let angle = Math.atan2(player.y - entity.y, player.x - entity.x);
-                // Wiggle
                 angle += (Math.random()-0.5); 
-                
-                let speed = 1.0;
-                // If player is loud, entity gets faster
-                if (player.noise > 50) speed = 3.5;
+                let speed = (player.noise > 50) ? 3.5 : 1.0;
                 
                 if (!checkCollision(entity.x + Math.cos(angle)*speed, entity.y)) entity.x += Math.cos(angle)*speed;
                 if (!checkCollision(entity.x, entity.y + Math.sin(angle)*speed)) entity.y += Math.sin(angle)*speed;
@@ -506,62 +485,44 @@
             else if (entity.state === 'CHASE') {
                 let angle = Math.atan2(player.y - entity.y, player.x - entity.x);
                 let speed = entity.speed + (entity.rage * 0.01);
-                
                 entity.x += Math.cos(angle) * speed;
                 entity.y += Math.sin(angle) * speed;
 
-                if (distToPlayer < 30) {
-                    gameOver();
-                }
+                if (distToPlayer < 30) gameOver();
             }
 
-            // 3. Key Logic
             let distKey = Math.hypot(keyObj.x - player.x, keyObj.y - player.y);
             if (distKey < 40) {
                 playSound('ping');
                 winGame();
             }
 
-            // UI Update
             noiseBar.style.width = player.noise + "%";
             staminaBar.style.width = player.stamina + "%";
             noiseBar.style.backgroundColor = player.noise > 80 ? 'red' : '#33ff00';
-            
             document.getElementById('noise-val').innerText = player.noise > 80 ? "CRITICAL" : (player.noise > 40 ? "HIGH" : "LOW");
         }
 
         function checkCollision(x, y) {
-            // Optimization: Only check walls near player
-            // Convert x,y to grid
             let gx = Math.floor(x / TILE_SIZE);
             let gy = Math.floor(y / TILE_SIZE);
-            
-            // Check radius of 1 tile
             if(map[gy][gx] === 1) return true;
             return false;
         }
 
         function draw() {
-            // Clear Screen
             ctx.fillStyle = "#000";
             ctx.fillRect(0, 0, width, height);
             
             ctx.save();
-            
-            // Camera follow player
             ctx.translate(width/2 - player.x, height/2 - player.y);
 
-            // 1. Draw Map (Only draw visible range to save perf)
             let viewRange = 1000;
-            let startCol = Math.floor((player.x - viewRange) / TILE_SIZE);
-            let endCol = Math.floor((player.x + viewRange) / TILE_SIZE);
-            let startRow = Math.floor((player.y - viewRange) / TILE_SIZE);
-            let endRow = Math.floor((player.y + viewRange) / TILE_SIZE);
+            let startCol = Math.max(0, Math.floor((player.x - viewRange) / TILE_SIZE));
+            let endCol = Math.min(MAP_SIZE, Math.floor((player.x + viewRange) / TILE_SIZE));
+            let startRow = Math.max(0, Math.floor((player.y - viewRange) / TILE_SIZE));
+            let endRow = Math.min(MAP_SIZE, Math.floor((player.y + viewRange) / TILE_SIZE));
 
-            if(startCol < 0) startCol = 0; if(endCol > MAP_SIZE) endCol = MAP_SIZE;
-            if(startRow < 0) startRow = 0; if(endRow > MAP_SIZE) endRow = MAP_SIZE;
-
-            // Draw Floor
             ctx.fillStyle = "#111";
             for(let y=startRow; y<endRow; y++) {
                 for(let x=startCol; x<endCol; x++) {
@@ -569,14 +530,12 @@
                 }
             }
 
-            // Draw Walls
             ctx.fillStyle = "#222";
             ctx.shadowBlur = 0;
             for(let y=startRow; y<endRow; y++) {
                 for(let x=startCol; x<endCol; x++) {
                     if(map[y][x] === 1) {
                         ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                        // Wall Top Detail
                         ctx.fillStyle = "#0a0a0a";
                         ctx.fillRect(x*TILE_SIZE + 5, y*TILE_SIZE + 5, TILE_SIZE - 10, TILE_SIZE - 10);
                         ctx.fillStyle = "#222";
@@ -584,7 +543,6 @@
                 }
             }
 
-            // Draw Key
             ctx.shadowBlur = 20;
             ctx.shadowColor = "#00ffff";
             ctx.fillStyle = "#00ffff";
@@ -592,32 +550,26 @@
             ctx.arc(keyObj.x, keyObj.y, 8 + Math.sin(Date.now()*0.01)*2, 0, Math.PI*2);
             ctx.fill();
             
-            // Floating text above key
             ctx.font = "20px VT323";
             ctx.fillStyle = "#fff";
             ctx.textAlign = "center";
             ctx.fillText("MASTER NODE", keyObj.x, keyObj.y - 20);
 
 
-            // Draw Entity (Only if visible? No, we draw him, darkness hides him)
-            // But we need to know if he is lit to trigger logic
             let dx = entity.x - player.x;
             let dy = entity.y - player.y;
             let dist = Math.sqrt(dx*dx + dy*dy);
             let angleToEntity = Math.atan2(dy, dx);
             let angleDiff = angleToEntity - player.angle;
-            // Normalize angle
             while(angleDiff > Math.PI) angleDiff -= Math.PI*2;
             while(angleDiff < -Math.PI) angleDiff += Math.PI*2;
             
-            let isLit = dist < 400 && Math.abs(angleDiff) < 0.6; // 0.6 rads is cone width
+            let isLit = dist < 450 && Math.abs(angleDiff) < 0.6; 
 
             if (isLit) {
-                // Entity is seen!
                 entity.rage += 1;
                 if(entity.rage > 50) entity.state = 'CHASE';
                 
-                // Draw Entity
                 ctx.shadowBlur = 10;
                 ctx.shadowColor = "red";
                 ctx.fillStyle = "#000";
@@ -625,18 +577,15 @@
                 ctx.arc(entity.x, entity.y, 20, 0, Math.PI*2);
                 ctx.fill();
                 
-                // Eyes
                 ctx.fillStyle = "red";
                 ctx.fillRect(entity.x - 8, entity.y - 5, 6, 6);
                 ctx.fillRect(entity.x + 2, entity.y - 5, 6, 6);
                 
-                // Glitch effect on entity
                 if (Math.random() > 0.8) {
                     ctx.fillStyle = "red";
                     ctx.fillRect(entity.x - 15, entity.y - 20, 30, 40);
                 }
             } else {
-                // Draw silhouette (faint) if close
                 if (dist < 150) {
                      ctx.fillStyle = "#050505";
                      ctx.beginPath();
@@ -645,62 +594,37 @@
                 }
             }
 
-            // Draw Player
             ctx.shadowBlur = 0;
-            ctx.fillStyle = "#33ff00"; // Terminal Green
+            ctx.fillStyle = "#33ff00"; 
             ctx.beginPath();
             ctx.arc(player.x, player.y, 10, 0, Math.PI*2);
             ctx.fill();
 
             ctx.restore();
 
-            // --- LIGHTING ENGINE (The Horror Part) ---
-            // Create the darkness overlay
-            // We use destination-in to keep only the lighted areas? 
-            // Better: Draw full black overlay, then 'destination-out' the flashlight
-            
-            // 1. Darkness Overlay
+            // --- DARKNESS MASK ---
             ctx.globalCompositeOperation = 'source-over';
-            
-            // Create radial gradient for flashlight
-            // We need to translate the gradient to where player is on screen (center)
             let gx = width/2;
             let gy = height/2;
             
-            // The "Darkness" Canvas
-            // We draw a huge black rectangle over everything
-            // But we can't just use destination-out on the main canvas or we lose the floor.
-            // We need to simulate light.
+            ctx.fillStyle = "rgba(0,0,0,0.98)"; 
             
-            // SIMPLE APPROACH:
-            // 1. We just drew the world.
-            // 2. Now we draw a "mask" that is black everywhere EXCEPT the cone.
-            
-            ctx.fillStyle = "rgba(0,0,0,0.98)"; // Pitch black
-            
-            // We need to use paths to define the dark area (Everything MINUS the cone)
             ctx.beginPath();
-            ctx.rect(0, 0, width, height); // Full screen
+            ctx.rect(0, 0, width, height); 
             
-            // Cut out the circle around player (Ambient light)
             ctx.arc(gx, gy, 40, 0, Math.PI*2, true);
             
-            // Cut out the cone
             ctx.moveTo(gx, gy);
-            // Cone geometry
-            let coneDist = 450 + (Math.sin(Date.now()*0.02)*10); // Breathing light
-            let coneWidth = 0.5; // Radians
+            let coneDist = 450 + (Math.sin(Date.now()*0.02)*10); 
+            let coneWidth = 0.5; 
             
             let startAngle = player.angle - coneWidth;
             let endAngle = player.angle + coneWidth;
             
-            // We need to draw the arc in COUNTER CLOCKWISE to subtract from the rect
             ctx.arc(gx, gy, coneDist, endAngle, startAngle, true);
             
             ctx.closePath();
             ctx.fill();
-            
-            // Add Scanlines / Noise on top done via CSS
         }
 
         function loop() {
@@ -724,10 +648,8 @@
             }, 500);
         }
 
-        // --- WIN & KEY FETCHING ---
         async function winGame() {
             gameState = 'WIN';
-            
             const winScreen = document.getElementById('win-screen');
             winScreen.style.display = 'flex';
             
@@ -735,9 +657,7 @@
             keyBox.innerText = "DECRYPTING...";
             keyBox.style.animation = "blink 0.5s infinite";
 
-            // Reuse your existing worker logic
             try {
-                // Using a fake score of 999 to signify 'Horror Mode Win'
                 const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -745,10 +665,9 @@
                         action: "GET_KEY",  
                         score: 999, 
                         secret: "POWA_HANDSHAKE_v1",
-                        startTime: Date.now() - 60000 // Fake duration
+                        startTime: Date.now() - 60000 
                     })
                 });
-
                 const data = await response.json();
 
                 if (response.ok && data.key) {
@@ -772,7 +691,6 @@
             alert("KEY COPIED TO CLIPBOARD");
         }
 
-        // --- INPUTS ---
         window.addEventListener('keydown', e => {
             if(keys.hasOwnProperty(e.key)) keys[e.key] = true;
             if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true;
