@@ -222,14 +222,6 @@
             transition: opacity 0.1s; z-index: 50;
         }
         
-        /* SNOWSTORM OVERLAY */
-        #snowstorm-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(220, 240, 255, 0.85); /* Heavy Fog */
-            opacity: 0; pointer-events: none; z-index: 60;
-            transition: opacity 1s ease-in-out;
-        }
-        
         #warp-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(200,255,255,0.8) 100%);
@@ -243,7 +235,7 @@
     <div id="game-container-box">
         <div class="snow-overlay"></div>
         <div id="debug-log"></div>
-        <div id="snowstorm-overlay"></div> <img id="bg-fail" src="fail.gif" class="bg-gif">
+        <img id="bg-fail" src="fail.gif" class="bg-gif">
         <img id="bg-win" src="win.gif" class="bg-gif">
 
         <canvas id="gameCanvas"></canvas>
@@ -276,7 +268,7 @@
                 </div>
 
                 <div id="key-warning" style="display:none; color:#ffcccc; font-size:1rem; margin-top:10px; border: 2px dashed #ff0000; background:rgba(40,0,0,0.8); padding:8px; animation: blink 2s infinite; font-family:'Russo One', sans-serif;">
-                    ⚠ DAILY GIFT CLAIMED ⚠<br>
+                    ⚠ DAILY GIFT EXHAUSTED ⚠<br>
                     <span style="font-size:0.7rem; color:#fff;">CHECK BACK TOMORROW</span>
                 </div>
                 <div style="color:#d4af37; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #d4af37; animation:blink 0.5s infinite alternate;">TAP TO SLEIGH</div>
@@ -353,7 +345,6 @@
         const scoreCounter = document.getElementById('score-counter');
         const wrapper = document.getElementById('game-container-box');
         const flashOverlay = document.getElementById('flash-overlay');
-        const snowstormOverlay = document.getElementById('snowstorm-overlay'); // SNOWSTORM ELEMENT
         const warpOverlay = document.getElementById('warp-overlay');
         const perfBtn = document.getElementById('perf-btn');
         
@@ -485,8 +476,8 @@
         let timeStopActive = false;
         let timeStopTimer = 0;
         
-        let snowStormActive = false;
-        let snowStormTimer = 0;
+        let orangeModeActive = false;
+        let orangeModeTimer = 0;
         
         let level1ShieldCount = 0;
         let level1ClockCount = 0;
@@ -521,32 +512,10 @@
             shieldBreak: () => { playTone(150, 'sawtooth', 0.3, 0.2); playTone(100, 'square', 0.3, 0.2, 0.05); },
             timeStop: () => { playTone(1000, 'sine', 1.0, 0.1); playTone(2000, 'triangle', 0.5, 0.1, 0.1); },
             
-            // WIND SOUND (Howling)
-            wind: () => {
-                try {
-                    const bufferSize = audioCtx.sampleRate * 2.0; 
-                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                    const data = buffer.getChannelData(0);
-                    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                    const noise = audioCtx.createBufferSource();
-                    noise.buffer = buffer;
-                    noise.loop = true;
-                    
-                    const filter = audioCtx.createBiquadFilter();
-                    filter.type = 'lowpass';
-                    filter.frequency.value = 400;
-                    
-                    const gain = audioCtx.createGain();
-                    gain.gain.setValueAtTime(0, audioCtx.currentTime);
-                    gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.5);
-                    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 5.0);
-                    
-                    noise.connect(filter);
-                    filter.connect(gain);
-                    gain.connect(audioCtx.destination);
-                    noise.start();
-                    noise.stop(audioCtx.currentTime + 5.0);
-                } catch(e) {}
+            // PANIC ALARM SOUND
+            panic: () => {
+                playTone(100, 'sawtooth', 1.0, 0.3); 
+                playTone(80, 'square', 1.0, 0.3, 0.1);
             },
             
             win: () => {
@@ -646,16 +615,13 @@
             setTimeout(() => { flashOverlay.style.opacity = 0; }, 50);
         }
         
-        // --- BLIZZARD LOGIC ---
-        function triggerSnowstorm() {
-            if(snowStormActive) return;
-            snowStormActive = true;
-            snowStormTimer = 60 * 5; // 5 Seconds
-            
-            snowstormOverlay.style.opacity = '1';
-            SFX.wind();
-            
-            if(!PERF_MODE) floatTexts.push({text: "SNOWSTORM!", x: width/2, y: height/2, life: 3.0, vy: -1, color: '#ff0000', bg: '#fff'});
+        // --- ORANGE MODE LOGIC ---
+        function triggerOrangeMode() {
+            if(orangeModeActive) return;
+            orangeModeActive = true;
+            orangeModeTimer = 60 * 5; // 5 Seconds
+            SFX.panic();
+            if(!PERF_MODE) floatTexts.push({text: "PANIC! ALL ORANGE!", x: width/2, y: height/2, life: 3.0, vy: -1, color: '#ff0000', bg: '#fff'});
         }
         
         function warpScreen() {
@@ -702,17 +668,10 @@
         function updateWinter() {
             if(PERF_MODE) return;
             let snowTick = Date.now() * 0.002; 
-            
-            // BLIZZARD PHYSICS
-            let hSpeed = snowStormActive ? -15 : 0;
-            let vSpeedMult = snowStormActive ? 3 : 1;
-            
             for(let s of snowFlakes) { 
-                s.y += s.speed * vSpeedMult; 
-                s.x += (Math.sin(snowTick + s.sway) * 0.5) + hSpeed; 
-                
+                s.y += s.speed; 
+                s.x += Math.sin(snowTick + s.sway) * 0.5; 
                 if(s.y > height) { s.y = -10; s.x = Math.random() * width; }
-                if(s.x < 0) s.x = width; // Wrap for wind
             }
             for(let n of northernLights) { n.x+=n.vx; if(n.x<-200) n.x=width+200; if(n.x>width+200) n.x=-200; }
         }
@@ -946,6 +905,9 @@
                     if (p.isAnomaly) activeColor = "#00ff00"; 
                     if (p.isTrap) activeColor = "#ffaa00"; 
                     if (p.hasBeenHit) activeColor = "#555";
+                    
+                    // --- ORANGE MODE OVERRIDE ---
+                    if (orangeModeActive && !p.hasBeenHit) activeColor = "#ffaa00";
 
                     if (era === 0) {
                         ctx.save();
@@ -997,7 +959,8 @@
                             ctx.fillRect(p.x - 5, height - p.bottom, p.w + 10, 10);
                         }
                         
-                        if (p.isTrap || p.isAnomaly) {
+                        // IF TRAP OR ANOMALY OR ORANGE MODE
+                        if (p.isTrap || p.isAnomaly || orangeModeActive) {
                              ctx.lineWidth = 3; ctx.strokeStyle = activeColor;
                              ctx.strokeRect(p.x, -2, p.w, p.top+2);
                              ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2);
@@ -1123,8 +1086,7 @@
             currentBiome = 0; 
             
             timeStopActive = false;
-            snowStormActive = false;
-            snowstormOverlay.style.opacity = 0;
+            orangeModeActive = false;
             canvas.classList.remove('time-frozen');
             level1ShieldCount = 0;
             level1ClockCount = 0;
@@ -1185,11 +1147,10 @@
                 }
             }
             
-            if(snowStormActive) {
-                snowStormTimer--;
-                if(snowStormTimer <= 0) {
-                    snowStormActive = false;
-                    snowstormOverlay.style.opacity = '0';
+            if(orangeModeActive) {
+                orangeModeTimer--;
+                if(orangeModeTimer <= 0) {
+                    orangeModeActive = false;
                 }
             }
 
@@ -1230,7 +1191,7 @@
                                score = Math.max(0, score - 5);
                                floatTexts.push({text: "COAL! -5", x: player.x, y: player.y-40, life: 1.5, vy: -2, color: '#ff0000'});
                            } else {
-                               triggerSnowstorm();
+                               triggerOrangeMode();
                            }
                        }
                    }
