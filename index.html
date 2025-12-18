@@ -132,6 +132,7 @@
 
     <script>
         // --- CONFIGURATION ---
+        // REPLACE WITH YOUR ACTUAL WORKER URL IF DIFFERENT
         const WORKER_URL = "https://powa-vault.powwa.workers.dev";
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -354,6 +355,7 @@
                     document.getElementById('levelup-screen').style.display = 'none';
                     gameState = 'PLAY';
                     updateHud();
+                    loop(); // <--- CRITICAL FIX: RESTART THE ENGINE
                 };
                 container.appendChild(card);
             });
