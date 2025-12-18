@@ -33,7 +33,6 @@
             overflow: hidden;
         }
 
-        /* DEBUG LOG (Keep hidden unless needed) */
         #debug-log {
             display: none; position: absolute; bottom: 10px; left: 10px; right: 10px;
             color: #ff0000; font-family: monospace; font-size: 12px;
@@ -329,7 +328,6 @@
     </div>
 
     <script>
-        // CRASH HANDLER
         function logError(msg) {
             console.error(msg);
             const el = document.getElementById('debug-log');
@@ -630,7 +628,8 @@
         function initWinter() {
             if(PERF_MODE) return;
             snowFlakes = []; northernLights = [];
-            for(let i=0; i<200; i++) {
+            // OPTIMIZED: Reduced count from 200 -> 150
+            for(let i=0; i<150; i++) {
                 snowFlakes.push({
                     x: Math.random()*width, 
                     y: Math.random()*height, 
@@ -698,7 +697,7 @@
             },
             draw: function() {
                 for(let t of trail) {
-                    // SAFE RADIUS CALCULATION
+                    // SAFE RADIUS CALCULATION (Prevents Crash)
                     let r = Math.max(0, this.size/2 * t.alpha);
                     if(r > 0) {
                         ctx.save(); ctx.translate(t.x+this.size/2, t.y+this.size/2); 
@@ -750,9 +749,11 @@
                     let topH = prevTop + (step * direction);
                     if(topH < minH) topH = minH + 20; if(topH > maxH) topH = maxH - 20;
                     
+                    // --- ANOMALY & TRAP LOGIC RESTORED ---
                     let isAnomaly = Math.random() < 0.2;
                     let anomalySpeed = isAnomaly ? (2 * (Math.random()<0.5?1:-1)) : 0;
-                    
+                    let centerY = topH + (GAP / 2);
+
                     let spawnType = null;
                     if (!infiniteMode && level1ShieldCount < 2 && Math.random() < 0.1 && !player.hasShield) {
                         spawnType = 'SHIELD'; level1ShieldCount++;
@@ -764,23 +765,56 @@
                     } else if (infiniteMode && pipeSpawnCount % 30 === 0 && !timeStopActive) {
                         spawnType = 'CLOCK';
                     }
-
+                    
+                    let forceStatic = false;
                     if (spawnType) {
+                        forceStatic = true;
                         items.push({ x: width + 20, y: topH + (GAP / 2), type: spawnType, taken: false });
-                        isAnomaly = false; anomalySpeed = 0;
                     }
                     
                     this.list.push({
                         x: width, w: 55, top: topH, bottom: height-GAP-topH, 
-                        passed: false, isAnomaly: isAnomaly, anomalySpeed: anomalySpeed, hasBeenHit: false
+                        passed: false, 
+                        // Restore Anomaly/Trap properties
+                        isAnomaly: forceStatic ? false : isAnomaly, 
+                        anomalySpeed: forceStatic ? 0 : anomalySpeed, 
+                        
+                        centerY: centerY,
+                        breathSpeed: 0.03 + Math.random() * 0.05,
+                        breathPhase: Math.random() * Math.PI * 2,
+                        breathAmp: 30 + Math.random() * 40,
+                        isTrap: !isAnomaly && Math.random() < 0.3, // 30% Chance for Closing Trap
+                        
+                        hasBeenHit: false
                     });
                 }
 
                 for(let p of this.list) {
                     p.x -= SPEED;
-                    if (!timeStopActive && p.isAnomaly) {
-                        p.top += p.anomalySpeed; p.bottom -= p.anomalySpeed; 
-                        if(p.top < 40 || p.top > height - GAP - 40) p.anomalySpeed *= -1;
+                    
+                    if (!timeStopActive) {
+                        if (p.isAnomaly) {
+                             // MOVING CHIMNEY LOGIC
+                             p.top += p.anomalySpeed; p.bottom -= p.anomalySpeed; 
+                             if(p.top < 40 || p.top > height - GAP - 40) p.anomalySpeed *= -1;
+                        } else {
+                            // CLOSING SNOWDRIFT (TRAP) LOGIC
+                            let wave = Math.sin(frames * p.breathSpeed + p.breathPhase);
+                            let currentGap = GAP + (wave * p.breathAmp * 0.5); // Subtle breathing
+                            
+                            if (p.isTrap) {
+                                let distToPlayer = p.x - player.x;
+                                if (distToPlayer < 300 && distToPlayer > -50) {
+                                    let panicFactor = (300 - distToPlayer) * 0.35; 
+                                    currentGap -= panicFactor; // CLOSE THE GAP
+                                }
+                            }
+                            
+                            if (currentGap < 90) currentGap = 90; // Safety min gap
+                            
+                            p.top = p.centerY - (currentGap / 2);
+                            p.bottom = height - (p.centerY + (currentGap / 2));
+                        }
                     }
 
                     let pad = 8; 
@@ -804,7 +838,10 @@
                         score++; p.passed = true; SFX.score(); triggerShake();
                         if (infiniteMode) scoreCounter.innerText = score; else updateProgress();
                         switchBiome();
-                        if(p.isAnomaly && !PERF_MODE) floatTexts.push({text: "HUMBUG!", x: player.x, y: player.y-40, life: 1.2, vy: -3});
+                        
+                        if(!PERF_MODE && p.isAnomaly) floatTexts.push({text: "MAGIC!", x: player.x, y: player.y-40, life: 1.2, vy: -3});
+                        if(!PERF_MODE && p.isTrap) floatTexts.push({text: "CLOSE ONE!", x: player.x, y: player.y-40, life: 1.2, vy: -3});
+                        
                         if(!infiniteMode && score >= TARGET_SCORE) winGame();
                     }
                 }
@@ -815,10 +852,14 @@
                 let era = Math.floor(score / 10) % 2; 
                 
                 for(let p of this.list) {
-                    let activeColor = p.isAnomaly ? "#ff0000" : "#fff";
+                    let activeColor = "#fff";
+                    // Color Logic for Traps/Anomalies
+                    if (p.isAnomaly) activeColor = "#00ff00"; // Green Magic
+                    if (p.isTrap && (p.x - player.x < 300)) activeColor = "#ff0000"; // Red Warning
                     if (p.hasBeenHit) activeColor = "#555";
 
                     if (era === 0) {
+                        // CANDY CANE STYLE (Optimized)
                         ctx.save();
                         ctx.fillStyle = "#fff"; 
                         ctx.fillRect(p.x, 0, p.w, p.top);
@@ -830,12 +871,14 @@
                             ctx.rect(p.x, 0, p.w, p.top);
                             ctx.rect(p.x, height - p.bottom, p.w, p.bottom);
                             ctx.clip();
-                            ctx.strokeStyle = "#ff0000";
+                            
+                            ctx.strokeStyle = (activeColor === "#fff") ? "#ff0000" : activeColor;
                             ctx.lineWidth = 15;
                             ctx.beginPath();
+                            // OPTIMIZATION: Only draw lines visible on screen
                             let startY = -50;
                             let endY = height + 50;
-                            for (let i = startY; i < endY; i += 30) {
+                            for (let i = startY; i < endY; i += 40) { // Increased gap for performance
                                 ctx.moveTo(p.x - 20, i);
                                 ctx.lineTo(p.x + p.w + 20, i + 40);
                             }
@@ -843,11 +886,13 @@
                             ctx.restore();
                         }
                         
-                        ctx.lineWidth = 3; ctx.strokeStyle = "#aaa";
+                        ctx.lineWidth = 3; ctx.strokeStyle = activeColor;
                         ctx.strokeRect(p.x, -2, p.w, p.top+2);
                         ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2);
+                        
                         ctx.restore();
                     } else {
+                        // CHIMNEY STYLE
                         ctx.fillStyle = "#883333";
                         ctx.fillRect(p.x, 0, p.w, p.top);
                         ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
@@ -856,15 +901,23 @@
                             ctx.save();
                             ctx.beginPath(); ctx.rect(p.x, 0, p.w, p.top); ctx.rect(p.x, height - p.bottom, p.w, p.bottom); ctx.clip();
                             ctx.fillStyle = "#662222";
-                            for(let y=0; y<height; y+=20) {
+                            for(let y=0; y<height; y+=30) {
                                 ctx.fillRect(p.x, y, p.w, 2); 
-                                if ((y/20)%2 === 0) ctx.fillRect(p.x + 20, y, 2, 20); 
+                                if ((y/30)%2 === 0) ctx.fillRect(p.x + 20, y, 2, 30); 
                             }
                             ctx.restore();
                             
+                            // Snow Caps
                             ctx.fillStyle="#fff";
                             ctx.fillRect(p.x - 5, p.top - 10, p.w + 10, 10);
                             ctx.fillRect(p.x - 5, height - p.bottom, p.w + 10, 10);
+                        }
+                        
+                        // Chimney Glow
+                        if (p.isTrap || p.isAnomaly) {
+                             ctx.lineWidth = 3; ctx.strokeStyle = activeColor;
+                             ctx.strokeRect(p.x, -2, p.w, p.top+2);
+                             ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2);
                         }
                     }
                 }
@@ -1056,7 +1109,7 @@
             shockwaves = shockwaves.filter(s => { s.r+=10; s.alpha-=0.05; return s.alpha>0; });
             floatTexts = floatTexts.filter(f => { f.y+=f.vy; f.life-=0.02; return f.life>0; });
             
-            // CRASH FIX: FILTER TRAIL SO ALPHA IS NEVER NEGATIVE
+            // TRAIL FIX (SAFE)
             trail = trail.filter(t => { t.alpha -= 0.08; return t.alpha > 0; });
 
             items = items.filter(item => {
