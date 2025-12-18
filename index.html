@@ -43,11 +43,6 @@
         .glitch-anim { animation: glitch-skew 1s infinite linear alternate-reverse; }
 
         @keyframes shake-s { 0% { transform: translate(0,0); } 50% { transform: translate(0, 4px); } 100% { transform: translate(0,0); } }
-        @keyframes glitch-skew {
-            0% { transform: skew(0deg); } 20% { transform: skew(-2deg); }
-            40% { transform: skew(2deg); } 60% { transform: skew(0deg); }
-            80% { transform: skew(-1deg); } 100% { transform: skew(1deg); }
-        }
         
         .time-frozen {
             filter: grayscale(100%) contrast(120%) brightness(110%);
@@ -106,6 +101,7 @@
             text-shadow: 0 0 15px #ffaa00;
             font-family: monospace;
             letter-spacing: -2px;
+            transition: color 0.2s;
         }
 
         #main-menu {
@@ -189,7 +185,6 @@
             z-index: 30; 
         }
         #perf-btn:hover { background: #00ffff; color: #000; }
-        #perf-btn.low-mode { border-color: #ff4444; color: #ff4444; box-shadow: none; }
         
         #mode-btn {
             background: rgba(0, 0, 0, 0.8);
@@ -661,9 +656,9 @@
             
             if (GAME_MODE === 'PILLARS') {
                 GAME_MODE = 'BULLETS';
-                TARGET_SCORE = 60; // Goal is 90 seconds
+                TARGET_SCORE = 90; // Goal is 90 seconds
                 
-                modeBtn.innerText = "MODE: SEX PISTOLS (HP x3)";
+                modeBtn.innerText = "MODE: SEX PISTOLS (HP x3)"; // JOJO REFERENCE
                 modeBtn.style.borderColor = "#ff0044";
                 modeBtn.style.color = "#ff0044";
                 modeBtn.style.boxShadow = "0 0 15px rgba(255, 0, 68, 0.2)";
@@ -1074,11 +1069,15 @@
             timer: 0,
             
             update: function() {
-                // SPAWN LOGIC - MUCH FASTER NOW (Every 5-15 frames)
-                let spawnRate = Math.max(5, 15 - Math.floor(score / 5)); // "Actual Shooting" speed
+                // SPAWN LOGIC - MISTA'S CURSE (FASTER ON 4)
+                let baseRate = Math.max(5, 15 - Math.floor(score / 5)); 
+                
+                // MISTA'S CURSE: If timer has '4', spawn insanely fast
+                if (score.toString().includes('4')) baseRate = 5; 
+                
                 this.timer++;
                 
-                if (this.timer >= spawnRate) {
+                if (this.timer >= baseRate) {
                     this.timer = 0;
                     
                     // Spawn random amounts (1 to 3 bullets at once)
@@ -1156,12 +1155,22 @@
                         }
                     }
                     
-                    // Score Counting (ONLY IF NOT IN BULLET MODE)
-                    // In Bullet Mode, score is handled by the timer
+                    // Dodge Logic ("PASS!")
                     if (b.x + b.w < player.x && !b.passed) {
                         b.passed = true; 
-                        // We do NOT add score++ here for bullets anymore
                         SFX.score();
+                        
+                        // "PASS! PASS! PASS!" effect (JoJo Reference)
+                        if (!PERF_MODE && Math.random() < 0.2) {
+                            floatTexts.push({
+                                text: "PASS!", 
+                                x: player.x, 
+                                y: player.y - 30, 
+                                life: 1.0, 
+                                vy: -1, 
+                                color: "#ffff00" 
+                            });
+                        }
                     }
                 }
 
@@ -1170,10 +1179,10 @@
 
             draw: function() {
                 for (let b of this.list) {
-                    // Sex Pistols Colors: Yellow/Orange for standard, Red for fast
-                    let color = "#ffaa00"; // Default Mista Orange
-                    if (b.type === 'WAVE') color = "#ffff00"; // Number 1 (Yellow)
-                    if (b.type === 'TARGET') color = "#ff0044"; // Aggressive (Red)
+                    // STAND COLORS: Default Orange, No.1 Yellow, Target Red
+                    let color = "#ffaa00"; 
+                    if (b.type === 'WAVE') color = "#ffff00"; 
+                    if (b.type === 'TARGET') color = "#ff0044"; 
                     
                     ctx.fillStyle = color;
                     ctx.beginPath();
@@ -1181,16 +1190,15 @@
                     if (PERF_MODE) {
                         ctx.fillRect(b.x, b.y, b.w, b.h);
                     } else {
-                        // 1. Draw Bullet Body
+                        // 1. Draw Body
                         ctx.shadowBlur = 10;
                         ctx.shadowColor = color;
                         ctx.roundRect(b.x, b.y, b.w, b.h, 5);
                         ctx.fill();
                         
-                        // 2. Draw "Sex Pistol" Eye (The Stand look)
+                        // 2. Draw "Sex Pistol" Eye
                         ctx.shadowBlur = 0;
-                        ctx.fillStyle = "#fff"; // White of eye
-                        // Draw eye near the front (left side since moving left)
+                        ctx.fillStyle = "#fff"; // White
                         ctx.beginPath();
                         ctx.arc(b.x + 5, b.y + 4, 3, 0, Math.PI*2);
                         ctx.fill();
@@ -1373,6 +1381,7 @@
             if (GAME_MODE === 'BULLETS') {
                 player.hp = 3;
                 document.getElementById('survival-timer').innerText = "0:00";
+                document.getElementById('survival-timer').style.color = "#ffff00"; // Reset Color
                 updateHPDisplay();
             } else {
                 player.hp = 1;
@@ -1453,6 +1462,15 @@
                 // Run this every 1 second (60 frames)
                 if (frames % 60 === 0) {
                     score++; // Score = Seconds Survived
+                    
+                    // --- MISTA'S CURSE: "4" IS UNLUCKY ---
+                    // If the time has a 4 in it, turn RED and SHAKE
+                    if (score.toString().includes('4')) {
+                        document.getElementById('survival-timer').style.color = "#ff0000"; 
+                        triggerShake();
+                    } else {
+                        document.getElementById('survival-timer').style.color = "#ffff00";
+                    }
                     
                     // Format time (e.g. 1:30)
                     let mins = Math.floor(score / 60);
@@ -1734,6 +1752,3 @@
     </script>
 </body>
 </html>
-
-
-
