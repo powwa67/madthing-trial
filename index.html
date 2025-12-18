@@ -532,6 +532,7 @@
         // --- NEW VARIABLES ---
         let timeStopActive = false;
         let timeStopTimer = 0;
+        let bulletsDodgedCount = 0; // NEW: Track dodges to limit "PASS" text freq
         
         // --- LEVEL 1 LIMITS ---
         let level1ShieldCount = 0;
@@ -1102,13 +1103,20 @@
                             type: type,
                             passed: false,
                             startY: yPos,
-                            waveOffset: Math.random() * 10
+                            waveOffset: Math.random() * 10,
+                            trail: [] // NEW: Trail array
                         });
                     }
                 }
 
                 // 2. MOVEMENT & COLLISION
                 for (let b of this.list) {
+                    // NEW: RECORD TRAIL POSITION BEFORE MOVE
+                    if(!PERF_MODE) {
+                        b.trail.push({x: b.x, y: b.y});
+                        if (b.trail.length > 10) b.trail.shift(); // Max trail length
+                    }
+
                     b.x += b.vx;
 
                     if (b.type === 'WAVE') {
@@ -1159,9 +1167,10 @@
                     if (b.x + b.w < player.x && !b.passed) {
                         b.passed = true; 
                         SFX.score();
+                        bulletsDodgedCount++; // NEW: Increment Dodge Counter
                         
-                        // "PASS! PASS! PASS!" effect (JoJo Reference)
-                        if (!PERF_MODE && Math.random() < 0.2) {
+                        // NEW: "PASS! PASS! PASS!" effect ONLY EVERY 5 DODGES
+                        if (!PERF_MODE && bulletsDodgedCount % 5 === 0) {
                             floatTexts.push({
                                 text: "PASS!", 
                                 x: player.x, 
@@ -1184,15 +1193,26 @@
                     if (b.type === 'WAVE') color = "#ffff00"; 
                     if (b.type === 'TARGET') color = "#ff0044"; 
                     
-                    ctx.fillStyle = color;
-                    ctx.beginPath();
-                    
                     if (PERF_MODE) {
+                        ctx.fillStyle = color;
+                        ctx.beginPath();
                         ctx.fillRect(b.x, b.y, b.w, b.h);
                     } else {
+                        // NEW: DRAW TRAIL
+                        for (let i = 0; i < b.trail.length; i++) {
+                            let t = b.trail[i];
+                            let alpha = (i / b.trail.length) * 0.4; 
+                            ctx.fillStyle = color;
+                            ctx.globalAlpha = alpha;
+                            ctx.fillRect(t.x, t.y, b.w, b.h);
+                        }
+                        ctx.globalAlpha = 1.0;
+
                         // 1. Draw Body
+                        ctx.fillStyle = color;
                         ctx.shadowBlur = 10;
                         ctx.shadowColor = color;
+                        ctx.beginPath();
                         ctx.roundRect(b.x, b.y, b.w, b.h, 5);
                         ctx.fill();
                         
@@ -1208,7 +1228,7 @@
                         ctx.arc(b.x + 4, b.y + 4, 1.5, 0, Math.PI*2);
                         ctx.fill();
 
-                        // 3. Trail
+                        // 3. Trail Line (The old subtle one, kept for style)
                         ctx.fillStyle = "rgba(255,255,255,0.3)";
                         ctx.fillRect(b.x + 10, b.y + 2, b.w, 2);
                     }
@@ -1376,6 +1396,7 @@
             score = 0; frames = 0;
             pipeSpawnCount = 0; 
             currentBiome = 0; 
+            bulletsDodgedCount = 0; // NEW: Reset dodge counter
             
             // RESET MODES
             if (GAME_MODE === 'BULLETS') {
