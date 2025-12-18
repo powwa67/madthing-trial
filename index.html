@@ -173,6 +173,25 @@
         #perf-btn:hover { background: #00ffff; color: #000; }
         #perf-btn.low-mode { border-color: #ff4444; color: #ff4444; box-shadow: none; }
         
+        #mode-btn {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #bd00ff;
+            color: #bd00ff;
+            font-family: 'Russo One', sans-serif;
+            font-size: 1rem;
+            padding: 10px 20px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(189, 0, 255, 0.2);
+            pointer-events: auto;
+            z-index: 30;
+            transition: all 0.2s;
+        }
+        #mode-btn:hover { background: #bd00ff; color: #000; }
+        
         .modal {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); z-index: 100; flex-direction: column;
@@ -221,6 +240,23 @@
         }
 
         .key-label { font-size: 0.8rem; color: #aaa; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
+
+        /* WIN INPUT STYLES */
+        .win-input-field {
+            background: #000; 
+            border: 2px solid #00ffff; 
+            color: #fff; 
+            padding: 15px; 
+            font-family: 'Russo One', sans-serif; 
+            font-size: 1.2rem; 
+            text-align: center; 
+            text-transform: uppercase; 
+            margin: 15px 0; 
+            width: 80%; 
+            border-radius: 8px; 
+            outline: none;
+            box-shadow: 0 0 15px rgba(0,255,255,0.3);
+        }
 
         #flash-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -275,13 +311,17 @@
                     ⚠ DAILY KEY EXHAUSTED ⚠<br>
                     <span style="font-size:0.7rem; color:#fff;">CHECK BACK TOMORROW</span>
                 </div>
+                
                 <div style="color:#ffff00; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #ff0; animation:blink 0.5s infinite alternate;">TAP TO START</div>
+                
+                <button id="mode-btn" onclick="toggleMode(event)">MODE: PILLARS</button>
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: HIGH</button>
             </div>
         </div>
-
+            
         <div id="death-modal" class="modal">
-            <h1 style="color:#f00; font-size:3rem; text-shadow:0 0 30px #f00; margin-bottom: 0;">BRUH</h1>
+            <img src="bruh.png" style="width: 150px; margin-bottom: 15px; border-radius: 8px;">
+            
             <div id="death-score-display" style="color:#fff; font-size:1.5rem; margin: 10px 0;">SCORE: 0</div>
             <div id="death-best-display" style="color:#bd00ff; font-size:1.2rem; text-shadow:0 0 10px #bd00ff;">BEST: 0</div>
             
@@ -291,22 +331,41 @@
                           text-transform: uppercase; margin: 15px 0; width: 80%; border-radius: 8px; outline: none;">
             
             <button id="submit-score-btn" class="btn" onclick="submitScore()" 
-                    style="background: linear-gradient(180deg, #00aaff, #0055aa); border-color: #fff; margin-bottom: 15px;">
+                    style="background: linear-gradient(180deg, #00aaff, #0055aa); border-color: #fff; margin-bottom: 15px; display: flex; justify-content: center; align-items: center;">
                 SUBMIT SCORE
             </button>
 
-            <p style="color:#aaa; font-size:0.9rem; margin-top:5px; max-width: 80%;">just go back to jllm atp fam</p>
+            <p id="death-msg" style="color:#aaa; font-size:0.9rem; margin-top:10px; max-width: 90%; line-height: 1.4; text-align: center;">
+    played like shit just like entire story of jjk lmao
+</p>
+
             <div style="width: 200px; height: 4px; background: #333; margin: 20px 0;"></div>
-            <button class="btn" style="background: linear-gradient(180deg, #555, #222); border-color:#888;" onclick="resetLevel()">TRY AGAIN</button>
+            
+            <button class="btn" style="background: linear-gradient(180deg, #555, #222); border-color:#888; display: flex; justify-content: center; align-items: center;" onclick="resetLevel()">
+                TRY AGAIN
+            </button>
         </div>
 
         <div id="win-modal" class="modal">
-            <h1 style="color:#00ffff; font-size:3rem; text-shadow: 0 0 20px #00ffff;">ACCESS GRANTED</h1>
-            <div class="key-container">
-                <div class="key-label">DAILY API KEY</div>
-                <div id="key-text" class="key-box">Loading...</div>
-                <button class="btn btn-copy" onclick="copyKey('key-text', this)">COPY KEY</button>
-                <button class="btn btn-continue" onclick="continueGame()">CONTINUE PLAYING</button>
+            <div id="win-input-section" style="display:none; width: 100%; display: flex; flex-direction: column; align-items: center;">
+                <h1 style="color:#00ffff; font-size:2.5rem; text-shadow: 0 0 20px #00ffff;">VICTORY</h1>
+                <p style="color:#fff; margin-bottom:15px;">ENTER NAME TO CLAIM REWARD</p>
+                
+                <input type="text" id="win-username-input" class="win-input-field" placeholder="YOUR NAME" maxlength="15">
+                
+                <button class="btn" onclick="submitWinDetails()" style="background: linear-gradient(180deg, #bd00ff, #7700aa);">
+                    CLAIM REWARD
+                </button>
+            </div>
+
+            <div id="win-reward-section" style="display:none; width: 100%; flex-direction: column; align-items: center;">
+                <h1 style="color:#00ffff; font-size:3rem; text-shadow: 0 0 20px #00ffff;">ACCESS GRANTED</h1>
+                <div class="key-container">
+                    <div class="key-label">DAILY API KEY</div>
+                    <div id="key-text" class="key-box">Loading...</div>
+                    <button class="btn btn-copy" onclick="copyKey('key-text', this)">COPY KEY</button>
+                    <button class="btn btn-continue" onclick="continueGame()">CONTINUE PLAYING</button>
+                </div>
             </div>
         </div>
     </div>
@@ -321,6 +380,7 @@
         const flashOverlay = document.getElementById('flash-overlay');
         const warpOverlay = document.getElementById('warp-overlay');
         const perfBtn = document.getElementById('perf-btn');
+        const modeBtn = document.getElementById('mode-btn');
         
         const deathModal = document.getElementById('death-modal');
         const winModal = document.getElementById('win-modal');
@@ -354,14 +414,16 @@
         resize();
 
         // --- GAME CONFIG & VERSION CONTROL ---
-        const KEY_ID = "day_7"; 
+        const KEY_ID = "day_14"; 
         const KEY_WARNING_MODE = "OFF"; 
+        
+        let GAME_MODE = 'PILLARS'; // 'PILLARS' or 'BULLETS'
 
         // !!! IMPORTANT: REPLACE THIS WITH YOUR CLOUDFLARE WORKER URL !!!
         const WORKER_URL = "https://powa-vault.powwa.workers.dev";
 
-        let TARGET_SCORE = 5; 
-        let SPEED = 6.5;     
+        let TARGET_SCORE = 70; 
+        let SPEED = 7;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
         let GAP = 170; 
@@ -421,11 +483,12 @@
             keyTextBox.style.animation = "blink 0.5s infinite";
 
             try {
-                // Send score, secret, AND startTime
+                // Send score, secret, startTime, AND THE ACTION
                 const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
+                        action: "GET_KEY",  
                         score: score, 
                         secret: "POWA_HANDSHAKE_v1",
                         startTime: gameStartTime
@@ -571,6 +634,24 @@
                 perfBtn.className = "";
                 initGalaxy();
                 initParticles();
+            }
+        };
+        
+        window.toggleMode = function(e) {
+            e.stopPropagation();
+            
+            if (GAME_MODE === 'PILLARS') {
+                GAME_MODE = 'BULLETS';
+                modeBtn.innerText = "MODE: BULLETS";
+                modeBtn.style.borderColor = "#ff0044";
+                modeBtn.style.color = "#ff0044";
+                modeBtn.style.boxShadow = "0 0 15px rgba(255, 0, 68, 0.2)";
+            } else {
+                GAME_MODE = 'PILLARS';
+                modeBtn.innerText = "MODE: PILLARS";
+                modeBtn.style.borderColor = "#bd00ff";
+                modeBtn.style.color = "#bd00ff";
+                modeBtn.style.boxShadow = "0 0 15px rgba(189, 0, 255, 0.2)";
             }
         };
 
@@ -728,30 +809,17 @@
                     let speedVal = 2; 
                     let anomalyDir = Math.random() < 0.5 ? 1 : -1;
                     let anomalySpeed = isAnomaly ? (speedVal * anomalyDir) : 0;
-                    let moveY = (Math.random()-0.5)*1.5; 
                     
-                    // --- SPAWN LOGIC START ---
+                    // --- SPAWN LOGIC ---
                     let spawnType = null;
-
-                    // 1. SHIELD (Level 1: Max 2 times total, random chance)
                     if (!infiniteMode && level1ShieldCount < 2 && Math.random() < 0.1 && !player.hasShield) {
-                        spawnType = 'SHIELD';
-                        level1ShieldCount++;
-                    }
-                    
-                    // 2. SHIELD (Infinite Mode: Every 25 Pillars)
-                    if (infiniteMode && pipeSpawnCount % 25 === 0 && !player.hasShield) {
+                        spawnType = 'SHIELD'; level1ShieldCount++;
+                    } else if (infiniteMode && pipeSpawnCount % 25 === 0 && !player.hasShield) {
                         spawnType = 'SHIELD';
                     }
-                    
-                    // 3. CLOCK (Level 1: Score > 30, Max 2 times)
                     if (!infiniteMode && score >= 30 && level1ClockCount < 2 && Math.random() < 0.15 && !timeStopActive) {
-                        spawnType = 'CLOCK';
-                        level1ClockCount++;
-                    }
-
-                    // 4. CLOCK (Infinite Mode: Every 30 Pillars)
-                    if (infiniteMode && pipeSpawnCount % 30 === 0 && !timeStopActive) {
+                        spawnType = 'CLOCK'; level1ClockCount++;
+                    } else if (infiniteMode && pipeSpawnCount % 30 === 0 && !timeStopActive) {
                         spawnType = 'CLOCK';
                     }
 
@@ -760,14 +828,23 @@
                         forceStatic = true; 
                         items.push({ x: width + 20, y: topH + (GAP / 2), type: spawnType, taken: false });
                     }
+                    
+                    let centerY = topH + (GAP / 2);
 
                     this.list.push({
                         x: width, w: 55, top: topH, bottom: height-GAP-topH, 
                         passed: false, 
-                        moveY: forceStatic ? 0 : moveY, 
                         isAnomaly: forceStatic ? false : isAnomaly,     
                         anomalySpeed: forceStatic ? 0 : anomalySpeed, 
-                        anomalyOffset: 0,
+                        
+                        // --- TRAP & BREATHING LOGIC ---
+                        centerY: centerY,
+                        breathSpeed: 0.03 + Math.random() * 0.05,
+                        breathPhase: Math.random() * Math.PI * 2,
+                        breathAmp: 30 + Math.random() * 40,
+                        
+                        isTrap: !isAnomaly && Math.random() < 0.3, 
+
                         hasBeenHit: false
                     });
                 }
@@ -777,13 +854,40 @@
                     
                     // FREEZE HAZARDS IF TIME STOP IS ACTIVE
                     if (!timeStopActive) {
-                        p.top += p.moveY; 
-                        if(p.top < 30 || p.top > height - GAP - 30) p.moveY *= -1;
-
-                        if(p.isAnomaly) {
+                        
+                        if (p.isAnomaly) {
+                            // --- ANOMALY (Elevator) ---
                             p.top += p.anomalySpeed;
                             p.bottom -= p.anomalySpeed; 
                             if(p.top < 40 || p.top > height - GAP - 40) p.anomalySpeed *= -1;
+                        } else {
+                            // --- STANDARD & TRAP LOGIC ---
+                            
+                            // 1. Calculate Base Sine Wave Gap
+                            let wave = Math.sin(frames * p.breathSpeed + p.breathPhase);
+                            let currentGap = 170 + (wave * p.breathAmp);
+                            
+                            // 2. TRAP LOGIC: Proximity Squeeze
+                            if (p.isTrap) {
+                                let distToPlayer = p.x - player.x;
+                                
+                                // If player is approaching (within 300px) and hasn't passed
+                                if (distToPlayer < 300 && distToPlayer > -50) {
+                                    // Calculate "Panic Squeeze"
+                                    let panicFactor = (300 - distToPlayer) * 0.35; 
+                                    currentGap -= panicFactor;
+                                }
+                            }
+
+                            // 3. Absolute Safety Clamp
+                            if (currentGap < 90) currentGap = 90;
+                            
+                            // 4. Apply Gap
+                            p.top = p.centerY - (currentGap / 2);
+                            p.bottom = height - (p.centerY + (currentGap / 2));
+                            
+                            if (p.top < 10) p.top = 10;
+                            if (p.bottom < 10) p.bottom = 10;
                         }
                     }
 
@@ -830,7 +934,11 @@
 
                 for(let p of this.list) {
                     let warningColor = p.isAnomaly && (frames % 20 < 10) ? "#ff0000" : mainColor;
-                    let activeColor = p.isAnomaly ? warningColor : mainColor;
+                    
+                    let isActiveTrap = p.isTrap && (p.x - player.x < 300) && (p.x - player.x > -50);
+                    let trapColor = isActiveTrap ? "#ffaa00" : mainColor; 
+                    
+                    let activeColor = p.isAnomaly ? warningColor : trapColor;
                     if (p.hasBeenHit) activeColor = "#555";
 
                     if (era === 0) {
@@ -903,6 +1011,111 @@
                 }
             }
         };
+        
+        const bulletManager = {
+            list: [],
+            timer: 0,
+            
+            update: function() {
+                // 1. SPAWN LOGIC
+                let spawnRate = Math.max(20, 50 - Math.floor(score / 2)); 
+                this.timer++;
+                
+                if (this.timer >= spawnRate) {
+                    this.timer = 0;
+                    
+                    let yPos = Math.random() * (height - 50) + 25;
+                    
+                    let type = 'STRAIGHT';
+                    let rand = Math.random();
+                    if (score > 10 && rand > 0.7) type = 'WAVE';
+                    if (score > 25 && rand > 0.9) type = 'TARGET';
+
+                    let baseSpeed = SPEED + (score * 0.1); 
+                    if (baseSpeed > 18) baseSpeed = 18;
+
+                    this.list.push({
+                        x: width, 
+                        y: yPos,
+                        w: 30, h: 10, // Bullet size
+                        vx: -baseSpeed,
+                        vy: 0,
+                        type: type,
+                        passed: false,
+                        startY: yPos,
+                        waveOffset: Math.random() * 10
+                    });
+                }
+
+                // 2. MOVEMENT & COLLISION
+                for (let b of this.list) {
+                    b.x += b.vx;
+
+                    if (b.type === 'WAVE') {
+                        b.y = b.startY + Math.sin((frames * 0.1) + b.waveOffset) * 60;
+                    } 
+                    else if (b.type === 'TARGET') {
+                        if (b.y < player.y) b.y += 1;
+                        else b.y -= 1;
+                    }
+
+                    let pad = 6;
+                    if (
+                        player.x + pad < b.x + b.w &&
+                        player.x + player.size - pad > b.x &&
+                        player.y + pad < b.y + b.h &&
+                        player.y + player.size - pad > b.y
+                    ) {
+                        if (player.hasShield) {
+                            player.hasShield = false;
+                            b.x = -100; // Remove bullet
+                            SFX.shieldBreak();
+                            triggerShake();
+                            if(!PERF_MODE) floatTexts.push({text: "SHIELD BROKEN", x: player.x, y: player.y-40, life: 1.5, vy: -1});
+                        } else {
+                            die();
+                        }
+                    }
+
+                    // Score Counting
+                    if (b.x + b.w < player.x && !b.passed) {
+                        score++;
+                        b.passed = true;
+                        SFX.score();
+                        if (infiniteMode) scoreCounter.innerText = score;
+                        else updateProgress();
+                        
+                        if (!infiniteMode && score >= TARGET_SCORE) winGame();
+                    }
+                }
+
+                this.list = this.list.filter(b => b.x > -100);
+            },
+
+            draw: function() {
+                for (let b of this.list) {
+                    let color = "#ff0044"; // Red (Straight)
+                    if (b.type === 'WAVE') color = "#ffff00"; // Yellow
+                    if (b.type === 'TARGET') color = "#ff00ff"; // Purple
+                    
+                    ctx.fillStyle = color;
+                    
+                    ctx.beginPath();
+                    
+                    if (PERF_MODE) {
+                        ctx.fillRect(b.x, b.y, b.w, b.h);
+                    } else {
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = color;
+                        ctx.roundRect(b.x, b.y, b.w, b.h, 5);
+                        ctx.fill();
+                        ctx.fillStyle = "rgba(255,255,255,0.5)";
+                        ctx.fillRect(b.x + 10, b.y + 2, b.w, 2);
+                        ctx.shadowBlur = 0;
+                    }
+                }
+            }
+        };
     
         // --- CORE FUNCTIONS ---
        function die() {
@@ -916,10 +1129,34 @@
             if(!PERF_MODE) {
                 for(let i=0; i<25; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 1.0, color: '#0ff', size: Math.random()*8+3});
             }
-            gameState = 'DIE_ANIM';
             
+            gameState = 'DIE_ANIM';
             deathScoreDisplay.innerText = `SCORE: ${score}`;
             deathBestDisplay.innerText = `BEST: ${highScore}`;
+
+            const msgElement = document.getElementById('death-msg');
+            
+            if (score > 500) {
+                msgElement.innerText = "TOUCH GRASS IMMEDIATELY. YOU ARE TOO POWERFUL."; 
+                msgElement.style.color = "#ff0000"; 
+                msgElement.style.textShadow = "0 0 10px #ff0000";
+            }
+            else if (score > 250) {
+                msgElement.innerText = "OKAY, YOU'RE ACTUALLY INSANE AT THIS."; 
+                msgElement.style.color = "#bd00ff"; 
+            } 
+            else if (score > 100) {
+                msgElement.innerText = "Okayyy.. damn, good run"; 
+                msgElement.style.color = "#00ff00"; 
+            } 
+            else if (score > 70) {
+                msgElement.innerText = "Respectable run. I'm proud of you";
+                msgElement.style.color = "#00ffff"; 
+            } 
+            else {
+                msgElement.innerText = "played like shit just like entire story of jjk lmao";
+                msgElement.style.color = "#aaa";
+            }
 
             bgFail.style.display = 'block';
             setTimeout(() => { bgFail.style.opacity = '1'; }, 10);
@@ -928,7 +1165,7 @@
             const savedName = localStorage.getItem('powa-username');
             if (savedName) {
                 document.getElementById('username-input').value = savedName;
-                submitScore(true); // Auto-submit
+                submitScore(true); 
             } else {
                 document.getElementById('username-input').disabled = false;
                 document.getElementById('submit-score-btn').disabled = false;
@@ -945,12 +1182,43 @@
             MUSIC.pause();
             SFX.win();
             flashScreen();
+            
             bgWin.style.display = 'block';
             setTimeout(() => { bgWin.style.opacity = '1'; }, 10);
             winModal.style.display = 'flex';
-            // TRIGGER SERVER FETCH
-            fetchServerKey();
+            
+            const savedName = localStorage.getItem('powa-username');
+            const winInput = document.getElementById('win-input-section');
+            const winReward = document.getElementById('win-reward-section');
+
+            if (savedName) {
+                winInput.style.display = 'none';
+                winReward.style.display = 'flex';
+                submitScore(true);
+                fetchServerKey();
+            } else {
+                winInput.style.display = 'flex';
+                winReward.style.display = 'none';
+            }
         }
+        
+        window.submitWinDetails = function() {
+            const nameInput = document.getElementById('win-username-input');
+            const rawName = nameInput.value.trim();
+            
+            if(!rawName) {
+                nameInput.style.borderColor = "#ff0000";
+                return;
+            }
+            
+            localStorage.setItem('powa-username', rawName);
+            
+            document.getElementById('win-input-section').style.display = 'none';
+            document.getElementById('win-reward-section').style.display = 'flex';
+            
+            submitScore(true);
+            fetchServerKey();
+        };
 
         window.continueGame = function() {
             infiniteMode = true;
@@ -965,10 +1233,8 @@
             scoreCounter.style.display = 'block';
             scoreCounter.innerText = score;
             
-            // RESET START TIME FOR SPEED CHECK
             gameStartTime = Date.now();
 
-            // --- COUNTDOWN LOGIC ---
             let count = 3;
             const countEl = document.getElementById('countdown');
             countEl.style.display = 'block';
@@ -1004,11 +1270,9 @@
             pipeSpawnCount = 0; 
             currentBiome = 0; 
             
-            // RESET TIME STOP ON DEATH
             timeStopActive = false;
             canvas.classList.remove('time-frozen');
             
-            // RESET LEVEL 1 SPAWN COUNTERS
             level1ShieldCount = 0;
             level1ClockCount = 0;
             
@@ -1031,7 +1295,9 @@
             player.hasShield = false; 
             hasShieldSpawned = false; 
             
-            obstacles.list = []; trail = []; shockwaves = []; floatTexts = []; items = [];
+            obstacles.list = []; 
+            bulletManager.list = [];
+            trail = []; shockwaves = []; floatTexts = []; items = [];
             
             initGalaxy(); initParticles();
             document.getElementById('main-menu').style.display = 'block';
@@ -1043,7 +1309,6 @@
             if(gameState === 'PLAY') return;
             if(audioCtx.state === 'suspended') audioCtx.resume(); 
             
-            // SET START TIME FOR ANTI-CHEAT
             gameStartTime = Date.now();
             
             if(infiniteMode) scoreCounter.style.display = 'block';
@@ -1057,17 +1322,15 @@
         function updatePhysics() {
             if(gameState !== 'PLAY' && gameState !== 'DIE_ANIM') return;
             
-            // --- TIME STOP LOGIC ---
             if (timeStopActive) {
                 timeStopTimer--;
                 if (timeStopTimer <= 0) {
                     timeStopActive = false;
                     canvas.classList.remove('time-frozen'); 
-                    SFX.shieldUp(); // Sound when time resumes
+                    SFX.shieldUp(); 
                 }
             }
 
-            // FREEZE BACKGROUND IF TIME STOPPED
             if (!timeStopActive) {
                 bgOffset -= SPEED * 0.5; if(bgOffset < -100) bgOffset = 0;
                 globalHue = (globalHue + 1) % 360;
@@ -1076,7 +1339,6 @@
 
             frames++;
 
-            // FREEZE PARTICLES
             if (!timeStopActive) {
                 particles = particles.filter(p => { if(p.type==='dust') { p.x -= p.speed; if(p.x<0) p.x=width; return true; } p.x += p.vx; p.y += p.vy; p.life -= 0.03; return p.life > 0; });
             }
@@ -1108,7 +1370,12 @@
             });
 
             if(gameState === 'PLAY') {
-                obstacles.update();
+                if (GAME_MODE === 'PILLARS') {
+                    obstacles.update();
+                } else {
+                    bulletManager.update();
+                }
+                
                 player.update();
                 if(player.y > height || player.y < -50) die();
             }
@@ -1162,7 +1429,12 @@
                 ctx.restore();
             }
 
-            obstacles.draw();
+            if (GAME_MODE === 'PILLARS') {
+                obstacles.draw();
+            } else {
+                bulletManager.draw();
+            }
+            
             if(gameState === 'PLAY' || gameState === 'DIE_ANIM' || gameState === 'WIN_PAUSE') player.draw();
 
             for(let p of particles) { if(p.type === 'explode') { ctx.fillStyle = p.color; ctx.globalAlpha = p.life; ctx.fillRect(p.x, p.y, p.size, p.size); } } ctx.globalAlpha = 1;
@@ -1178,7 +1450,9 @@
         function handleInput(e) {
             if(e.type === 'keydown' && e.code === 'Space') e.preventDefault();
             if(e.target.id === 'perf-btn') return;
+            if(e.target.id === 'mode-btn') return;
             if(e.target.closest('#leaderboard')) return;
+            if(e.target.closest('.win-input-field')) return; 
 
             if(gameState === 'WIN_PAUSE') return;
             if(gameState === 'START') startGame();
@@ -1271,19 +1545,28 @@
         }
 
         window.submitScore = function(isAuto = false) {
-            const nameInput = document.getElementById('username-input');
+            let storedName = localStorage.getItem('powa-username');
+            let rawName = storedName || "";
+            
+            const nameInput = document.getElementById('username-input'); 
             const submitBtn = document.getElementById('submit-score-btn');
-            let rawName = nameInput.value.toUpperCase().trim();
-            const name = rawName.substring(0, 15) || "ANONYMOUS";
+
+            if (!isAuto && nameInput) {
+                rawName = nameInput.value;
+            }
+
+            const name = rawName.toUpperCase().trim().substring(0, 15) || "ANONYMOUS";
             localStorage.setItem('powa-username', name);
 
             if(score===0 && !isAuto) { alert("Play first!"); return; }
             
-            // SECURITY FIX: FORCE NUMBER TYPE
             let scoreToSend = parseInt(score, 10);
             
-            submitBtn.innerText = isAuto ? "AUTO-SENDING..." : "CHECKING...";
-            submitBtn.disabled = true; nameInput.disabled = true;
+            if(submitBtn) {
+                submitBtn.innerText = isAuto ? "AUTO-SENDING..." : "CHECKING...";
+                submitBtn.disabled = true; 
+                if(nameInput) nameInput.disabled = true;
+            }
 
             const dailyCollection = `leaderboard_${KEY_ID}`;
             
@@ -1291,12 +1574,16 @@
                 submitToCollection("leaderboard", name, scoreToSend),   
                 submitToCollection(dailyCollection, name, scoreToSend)
             ]).then(() => {
-                submitBtn.innerText = "SENT!";
-                submitBtn.style.background = "#333";
+                if(submitBtn) {
+                    submitBtn.innerText = "SENT!";
+                    submitBtn.style.background = "#333";
+                }
             }).catch((err) => {
                 console.error(err);
-                submitBtn.innerText = "ERROR";
-                submitBtn.disabled = false;
+                if(submitBtn) {
+                    submitBtn.innerText = "ERROR";
+                    submitBtn.disabled = false;
+                }
             });
         };
 
@@ -1311,4 +1598,3 @@
     </script>
 </body>
 </html>
-
