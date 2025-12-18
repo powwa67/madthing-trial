@@ -222,11 +222,12 @@
             transition: opacity 0.1s; z-index: 50;
         }
         
-        /* FLASHBANG WHITE SCREEN (FIXED) */
-        #flashbang-overlay {
+        /* SNOWSTORM OVERLAY */
+        #snowstorm-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; opacity: 0; pointer-events: none; z-index: 90; /* High Z-index */
-            /* No transition initially */
+            background: rgba(220, 240, 255, 0.85); /* Heavy Fog */
+            opacity: 0; pointer-events: none; z-index: 60;
+            transition: opacity 1s ease-in-out;
         }
         
         #warp-overlay {
@@ -242,7 +243,7 @@
     <div id="game-container-box">
         <div class="snow-overlay"></div>
         <div id="debug-log"></div>
-        <div id="flashbang-overlay"></div> <img id="bg-fail" src="fail.gif" class="bg-gif">
+        <div id="snowstorm-overlay"></div> <img id="bg-fail" src="fail.gif" class="bg-gif">
         <img id="bg-win" src="win.gif" class="bg-gif">
 
         <canvas id="gameCanvas"></canvas>
@@ -352,7 +353,7 @@
         const scoreCounter = document.getElementById('score-counter');
         const wrapper = document.getElementById('game-container-box');
         const flashOverlay = document.getElementById('flash-overlay');
-        const flashbangOverlay = document.getElementById('flashbang-overlay'); // FLASHBANG ELEMENT
+        const snowstormOverlay = document.getElementById('snowstorm-overlay'); // SNOWSTORM ELEMENT
         const warpOverlay = document.getElementById('warp-overlay');
         const perfBtn = document.getElementById('perf-btn');
         
@@ -484,6 +485,9 @@
         let timeStopActive = false;
         let timeStopTimer = 0;
         
+        let snowStormActive = false;
+        let snowStormTimer = 0;
+        
         let level1ShieldCount = 0;
         let level1ClockCount = 0;
 
@@ -517,30 +521,31 @@
             shieldBreak: () => { playTone(150, 'sawtooth', 0.3, 0.2); playTone(100, 'square', 0.3, 0.2, 0.05); },
             timeStop: () => { playTone(1000, 'sine', 1.0, 0.1); playTone(2000, 'triangle', 0.5, 0.1, 0.1); },
             
-            // FLASHBANG AUDIO: White Noise Burst + Tinnitus Ring
-            flashbang: () => {
+            // WIND SOUND (Howling)
+            wind: () => {
                 try {
-                    // 1. Noise Burst
-                    const bufferSize = audioCtx.sampleRate * 0.5; 
+                    const bufferSize = audioCtx.sampleRate * 2.0; 
                     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                     const data = buffer.getChannelData(0);
                     for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
                     const noise = audioCtx.createBufferSource();
                     noise.buffer = buffer;
-                    const noiseGain = audioCtx.createGain();
-                    noiseGain.gain.setValueAtTime(0.8, audioCtx.currentTime);
-                    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-                    noise.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+                    noise.loop = true;
+                    
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 400;
+                    
+                    const gain = audioCtx.createGain();
+                    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.5);
+                    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 5.0);
+                    
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(audioCtx.destination);
                     noise.start();
-
-                    // 2. High Ringing
-                    const osc = audioCtx.createOscillator();
-                    const oscGain = audioCtx.createGain();
-                    osc.type = 'sine'; osc.frequency.value = 3500;
-                    oscGain.gain.setValueAtTime(0.2, audioCtx.currentTime); 
-                    oscGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.0);
-                    osc.connect(oscGain); oscGain.connect(audioCtx.destination);
-                    osc.start(); osc.stop(audioCtx.currentTime + 2.0);
+                    noise.stop(audioCtx.currentTime + 5.0);
                 } catch(e) {}
             },
             
@@ -641,24 +646,16 @@
             setTimeout(() => { flashOverlay.style.opacity = 0; }, 50);
         }
         
-        // --- FIXED FLASHBANG LOGIC ---
-        function triggerFlashbang() {
-            // 1. Reset Transition to Instant
-            flashbangOverlay.style.transition = 'none';
-            flashbangOverlay.style.opacity = '1';
+        // --- BLIZZARD LOGIC ---
+        function triggerSnowstorm() {
+            if(snowStormActive) return;
+            snowStormActive = true;
+            snowStormTimer = 60 * 5; // 5 Seconds
             
-            // 2. Force Browser Reflow (The Magic Fix)
-            void flashbangOverlay.offsetWidth; 
+            snowstormOverlay.style.opacity = '1';
+            SFX.wind();
             
-            // 3. Play Sound & Effects
-            SFX.flashbang();
-            if(!PERF_MODE) floatTexts.push({text: "FLASHBANG!", x: width/2, y: height/2, life: 3.0, vy: -1, color: '#000', bg: '#fff'});
-            
-            // 4. Start Fade Out after frame paint
-            setTimeout(() => {
-                flashbangOverlay.style.transition = 'opacity 2s ease-out';
-                flashbangOverlay.style.opacity = '0';
-            }, 50);
+            if(!PERF_MODE) floatTexts.push({text: "SNOWSTORM!", x: width/2, y: height/2, life: 3.0, vy: -1, color: '#ff0000', bg: '#fff'});
         }
         
         function warpScreen() {
@@ -705,10 +702,17 @@
         function updateWinter() {
             if(PERF_MODE) return;
             let snowTick = Date.now() * 0.002; 
+            
+            // BLIZZARD PHYSICS
+            let hSpeed = snowStormActive ? -15 : 0;
+            let vSpeedMult = snowStormActive ? 3 : 1;
+            
             for(let s of snowFlakes) { 
-                s.y += s.speed; 
-                s.x += Math.sin(snowTick + s.sway) * 0.5; 
+                s.y += s.speed * vSpeedMult; 
+                s.x += (Math.sin(snowTick + s.sway) * 0.5) + hSpeed; 
+                
                 if(s.y > height) { s.y = -10; s.x = Math.random() * width; }
+                if(s.x < 0) s.x = width; // Wrap for wind
             }
             for(let n of northernLights) { n.x+=n.vx; if(n.x<-200) n.x=width+200; if(n.x>width+200) n.x=-200; }
         }
@@ -1119,7 +1123,8 @@
             currentBiome = 0; 
             
             timeStopActive = false;
-            flashbangOverlay.style.opacity = 0;
+            snowStormActive = false;
+            snowstormOverlay.style.opacity = 0;
             canvas.classList.remove('time-frozen');
             level1ShieldCount = 0;
             level1ClockCount = 0;
@@ -1179,6 +1184,14 @@
                     SFX.shieldUp();
                 }
             }
+            
+            if(snowStormActive) {
+                snowStormTimer--;
+                if(snowStormTimer <= 0) {
+                    snowStormActive = false;
+                    snowstormOverlay.style.opacity = '0';
+                }
+            }
 
             frames++;
 
@@ -1217,7 +1230,7 @@
                                score = Math.max(0, score - 5);
                                floatTexts.push({text: "COAL! -5", x: player.x, y: player.y-40, life: 1.5, vy: -2, color: '#ff0000'});
                            } else {
-                               triggerFlashbang();
+                               triggerSnowstorm();
                            }
                        }
                    }
@@ -1261,9 +1274,8 @@
                     let txtW = ctx.measureText(f.text).width + 20;
                     
                     // Box Background
-                    ctx.fillStyle = "rgba(0,0,0,0.8)";
+                    ctx.fillStyle = f.bg || "rgba(0,0,0,0.8)";
                     ctx.beginPath();
-                    // Fallback for rounded rect
                     ctx.fillRect(f.x - txtW/2, f.y - 25, txtW, 35);
                     
                     ctx.fillStyle = f.color || "#fff"; 
