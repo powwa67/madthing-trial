@@ -222,11 +222,11 @@
             transition: opacity 0.1s; z-index: 50;
         }
         
-        /* FLASHBANG WHITE SCREEN */
+        /* FLASHBANG WHITE SCREEN (FIXED) */
         #flashbang-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; opacity: 0; pointer-events: none; z-index: 60;
-            transition: opacity 2.5s ease-out; /* Fade out time */
+            background: #fff; opacity: 0; pointer-events: none; z-index: 90; /* High Z-index */
+            /* No transition initially */
         }
         
         #warp-overlay {
@@ -538,9 +538,9 @@
                     const oscGain = audioCtx.createGain();
                     osc.type = 'sine'; osc.frequency.value = 3500;
                     oscGain.gain.setValueAtTime(0.2, audioCtx.currentTime); 
-                    oscGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.5);
+                    oscGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.0);
                     osc.connect(oscGain); oscGain.connect(audioCtx.destination);
-                    osc.start(); osc.stop(audioCtx.currentTime + 2.5);
+                    osc.start(); osc.stop(audioCtx.currentTime + 2.0);
                 } catch(e) {}
             },
             
@@ -641,13 +641,24 @@
             setTimeout(() => { flashOverlay.style.opacity = 0; }, 50);
         }
         
+        // --- FIXED FLASHBANG LOGIC ---
         function triggerFlashbang() {
-            flashbangOverlay.style.opacity = 1; // Instant White
-            SFX.flashbang();
-            if(!PERF_MODE) floatTexts.push({text: "FLASHBANG!", x: width/2, y: height/2, life: 3.0, vy: -1, color: '#ff0000', bg: '#fff'});
+            // 1. Reset Transition to Instant
+            flashbangOverlay.style.transition = 'none';
+            flashbangOverlay.style.opacity = '1';
             
-            // Fade out CSS
-            setTimeout(() => { flashbangOverlay.style.opacity = 0; }, 100); 
+            // 2. Force Browser Reflow (The Magic Fix)
+            void flashbangOverlay.offsetWidth; 
+            
+            // 3. Play Sound & Effects
+            SFX.flashbang();
+            if(!PERF_MODE) floatTexts.push({text: "FLASHBANG!", x: width/2, y: height/2, life: 3.0, vy: -1, color: '#000', bg: '#fff'});
+            
+            // 4. Start Fade Out after frame paint
+            setTimeout(() => {
+                flashbangOverlay.style.transition = 'opacity 2s ease-out';
+                flashbangOverlay.style.opacity = '0';
+            }, 50);
         }
         
         function warpScreen() {
