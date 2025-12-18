@@ -12,7 +12,7 @@
     <style>
         body {
             margin: 0;
-            background-color: #051015; /* Dark snowy night */
+            background-color: #051015;
             font-family: 'Russo One', sans-serif;
             overflow: hidden;
             width: 100vw;
@@ -27,17 +27,16 @@
         #game-container-box {
             position: relative;
             background: #000;
-            box-shadow: 0 0 60px rgba(255, 0, 0, 0.4); /* Red Glow */
+            box-shadow: 0 0 40px rgba(255, 0, 0, 0.4);
             border: 4px solid #fff;
             border-radius: 12px;
             overflow: hidden;
         }
 
-        /* SNOW OVERLAY EFFECT */
         .snow-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 5;
-            background: radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(10,20,40,0.5) 100%);
+            background: radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(10,20,40,0.3) 100%);
         }
 
         .bg-gif {
@@ -56,9 +55,8 @@
             100% { transform: translateY(0px) rotate(0deg); }
         }
         
-        /* FROZEN EFFECT */
         .time-frozen {
-            filter: sepia(100%) hue-rotate(180deg) saturate(200%); /* Blue Ice effect */
+            filter: sepia(100%) hue-rotate(180deg) saturate(200%);
             transition: filter 0.5s ease-out;
         }
 
@@ -78,7 +76,7 @@
         #progress-container { flex-grow: 1; display: flex; flex-direction: column; }
 
         #progress-bar {
-            height: 20px; background: rgba(0,0,0,0.6); border: 2px solid #d4af37; /* Gold Border */
+            height: 20px; background: rgba(0,0,0,0.6); border: 2px solid #d4af37;
             border-radius: 10px; position: relative; overflow: hidden;
             box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); transform: skew(-5deg);
         }
@@ -112,29 +110,17 @@
         }
         
         .high-score-label {
-            color: #d4af37; /* Gold */
-            font-size: 1.2rem;
-            margin-top: 10px;
-            text-shadow: 0 0 10px #d4af37;
-            letter-spacing: 1px;
+            color: #d4af37; font-size: 1.2rem; margin-top: 10px;
+            text-shadow: 0 0 10px #d4af37; letter-spacing: 1px;
         }
 
         #leaderboard {
-            margin: 15px auto; 
-            width: 320px; 
-            height: 210px;
-            background: rgba(10, 0, 0, 0.9); 
-            border: 2px solid #00ff00; 
+            margin: 15px auto; width: 320px; height: 210px;
+            background: rgba(10, 0, 0, 0.9); border: 2px solid #00ff00; 
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.8);
-            border-radius: 10px; 
-            padding: 10px; 
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            pointer-events: auto;            
-            text-align: left; 
-            box-sizing: border-box;
-            font-family: 'Russo One', sans-serif; 
+            border-radius: 10px; padding: 10px; overflow: hidden;
+            display: flex; flex-direction: column; pointer-events: auto;            
+            text-align: left; box-sizing: border-box; font-family: 'Russo One', sans-serif; 
         }
 
         #tab-container {
@@ -152,10 +138,7 @@
         }
 
         #leaderboard-list {
-            overflow-y: auto; 
-            -webkit-overflow-scrolling: touch; 
-            flex-grow: 1; 
-            text-align: left;
+            overflow-y: auto; -webkit-overflow-scrolling: touch; flex-grow: 1; text-align: left;
         }
 
         #leaderboard-list::-webkit-scrollbar { width: 6px; }
@@ -163,21 +146,11 @@
         #leaderboard-list::-webkit-scrollbar-thumb { background: #ff0000; border-radius: 3px; }
         
         #perf-btn {
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #fff;
-            color: #fff;
-            font-family: 'Russo One', sans-serif;
-            font-size: 1rem;
-            padding: 10px 20px;
-            margin-top: 25px;
-            cursor: pointer;
-            border-radius: 8px;
-            text-transform: uppercase;
-            transition: all 0.2s;
-            pointer-events: auto; 
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
-            position: relative;
-            z-index: 30; 
+            background: rgba(0, 0, 0, 0.8); border: 2px solid #fff; color: #fff;
+            font-family: 'Russo One', sans-serif; font-size: 1rem; padding: 10px 20px;
+            margin-top: 25px; cursor: pointer; border-radius: 8px;
+            text-transform: uppercase; transition: all 0.2s; pointer-events: auto; 
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); position: relative; z-index: 30; 
         }
         #perf-btn:hover { background: #fff; color: #000; }
         
@@ -190,7 +163,6 @@
         }
 
         #win-modal { background: rgba(255,255,255,0.1); backdrop-filter: none; }
-
         @keyframes fadeIn { from { opacity: 0; transform: scale(1.1); } to { opacity: 1; transform: scale(1); } }
 
         .btn {
@@ -230,20 +202,11 @@
 
         .key-label { font-size: 0.8rem; color: #aaa; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
 
-        /* WIN INPUT STYLES */
         .win-input-field {
-            background: #000; 
-            border: 2px solid #d4af37; 
-            color: #d4af37; 
-            padding: 15px; 
-            font-family: 'Russo One', sans-serif; 
-            font-size: 1.2rem; 
-            text-align: center; 
-            text-transform: uppercase; 
-            margin: 15px 0; 
-            width: 80%; 
-            border-radius: 8px; 
-            outline: none;
+            background: #000; border: 2px solid #d4af37; color: #d4af37; 
+            padding: 15px; font-family: 'Russo One', sans-serif; font-size: 1.2rem; 
+            text-align: center; text-transform: uppercase; margin: 15px 0; 
+            width: 80%; border-radius: 8px; outline: none;
             box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
         }
 
@@ -265,7 +228,8 @@
 
     <div id="game-container-box">
         <div class="snow-overlay"></div>
-        <img id="bg-fail" src="fail.gif" class="bg-gif"> <img id="bg-win" src="win.gif" class="bg-gif">
+        <img id="bg-fail" src="fail.gif" class="bg-gif">
+        <img id="bg-win" src="win.gif" class="bg-gif">
 
         <canvas id="gameCanvas"></canvas>
         <div id="flash-overlay"></div>
@@ -399,15 +363,15 @@
         resize();
 
         // --- GAME CONFIG ---
-        const KEY_ID = "day_18"; // Updated ID
+        const KEY_ID = "day_18"; 
         const KEY_WARNING_MODE = "ON"; 
-        const WORKER_URL = "https://powa-vault.powwa.workers.dev"; // Your existing URL
+        const WORKER_URL = "https://powa-vault.powwa.workers.dev"; 
 
         let TARGET_SCORE = 70; 
         let SPEED = 7;     
         let GRAVITY = 0.6;
         let JUMP = 8.5;
-        let GAP = 180; // Slightly easier for Xmas mood
+        let GAP = 180; 
         let PERF_MODE = false;
 
         let gameStartTime = 0;
@@ -433,10 +397,10 @@
 
         // --- CHRISTMAS BIOMES ---
         const BIOMES = [
-            { bgTop: '#051015', bgBot: '#102030', grid: 'hsla(200, 50%, 50%, 0.1)', star: '#fff', nebula: 'rgba(255, 255, 255, 0.1)', border: '#00ffff' }, // Silent Night
-            { bgTop: '#001505', bgBot: '#003010', grid: 'hsla(120, 100%, 30%, 0.2)', star: '#ffdddd', nebula: 'rgba(255, 0, 0, 0.1)', border: '#00ff00' }, // Grinch Green
-            { bgTop: '#200505', bgBot: '#400505', grid: 'hsla(0, 100%, 50%, 0.2)', star: '#d4af37', nebula: 'rgba(255, 215, 0, 0.15)', border: '#ff0000' }, // Santa Red
-            { bgTop: '#100020', bgBot: '#200040', grid: 'hsla(280, 50%, 50%, 0.2)', star: '#ccffff', nebula: 'rgba(0, 255, 255, 0.2)', border: '#d4af37' }, // Magic Night
+            { bgTop: '#051015', bgBot: '#102030', grid: 'hsla(200, 50%, 50%, 0.1)', star: '#fff', nebula: 'rgba(255, 255, 255, 0.1)', border: '#00ffff' }, 
+            { bgTop: '#001505', bgBot: '#003010', grid: 'hsla(120, 100%, 30%, 0.2)', star: '#ffdddd', nebula: 'rgba(255, 0, 0, 0.1)', border: '#00ff00' }, 
+            { bgTop: '#200505', bgBot: '#400505', grid: 'hsla(0, 100%, 50%, 0.2)', star: '#d4af37', nebula: 'rgba(255, 215, 0, 0.15)', border: '#ff0000' }, 
+            { bgTop: '#100020', bgBot: '#200040', grid: 'hsla(280, 50%, 50%, 0.2)', star: '#ccffff', nebula: 'rgba(0, 255, 255, 0.2)', border: '#d4af37' }, 
             { bgTop: '#000000', bgBot: '#111111', grid: 'rainbow', star: 'rainbow', nebula: 'rainbow', border: '#fff' }
         ];
 
@@ -487,7 +451,7 @@
             }
         }
 
-        const BGM = new Audio('bgm_game.mp3'); // You might want to swap this file!
+        const BGM = new Audio('bgm_game.mp3'); 
         BGM.loop = true;
         BGM.volume = 0.5;
         
@@ -511,26 +475,17 @@
         }
 
         const SFX = {
-            // Sleigh Bell Sound
             jump: () => {
                 playTone(1200, 'sine', 0.1, 0.05);
                 playTone(1500, 'triangle', 0.1, 0.05, 0.02);
-                playTone(2000, 'sine', 0.2, 0.02, 0.04);
             },
-            score: () => playTone(880, 'sine', 0.2, 0.05), // Ding
+            score: () => playTone(880, 'sine', 0.2, 0.05),
             shieldUp: () => { playTone(440, 'triangle', 0.2, 0.1); playTone(554, 'triangle', 0.2, 0.1, 0.1); playTone(659, 'triangle', 0.3, 0.1, 0.2); },
             shieldBreak: () => { playTone(150, 'sawtooth', 0.3, 0.2); playTone(100, 'square', 0.3, 0.2, 0.05); },
-            timeStop: () => { 
-                playTone(1000, 'sine', 1.0, 0.1); // Ice freeze sound
-                playTone(2000, 'triangle', 0.5, 0.1, 0.1);
-            },
+            timeStop: () => { playTone(1000, 'sine', 1.0, 0.1); playTone(2000, 'triangle', 0.5, 0.1, 0.1); },
             win: () => {
-                // Jingle Bells start
                 let notes = [659, 659, 659, 0, 659, 659, 659, 0, 659, 783, 523, 587, 659];
-                let duration = 0.2;
-                notes.forEach((n, i) => {
-                    if(n>0) playTone(n, 'triangle', 0.3, 0.1, i*0.25);
-                });
+                notes.forEach((n, i) => { if(n>0) playTone(n, 'triangle', 0.3, 0.1, i*0.25); });
             },
             explode: () => {
                 const bufferSize = audioCtx.sampleRate * 0.5;
@@ -563,7 +518,6 @@
         let frames = 0;
         let score = 0;
         let pipeSpawnCount = 0; 
-        let hasShieldSpawned = false;
         let gameState = 'START';
         let globalHue = 0; 
         let bgOffset = 0;  
@@ -574,10 +528,9 @@
         let floatTexts = []; 
         let items = []; 
         
-        let snowFlakes = []; // Replaces stars
-        let northernLights = []; // Replaces nebulae
+        let snowFlakes = []; 
+        let northernLights = []; 
 
-        // --- FIXED TIMESTEP ---
         const TIME_STEP = 1000 / 60;
         let lastTime = 0;
         let accumulator = 0;
@@ -654,7 +607,6 @@
         function initWinter() {
             if(PERF_MODE) return;
             snowFlakes = []; northernLights = [];
-            // Create Snow
             for(let i=0; i<200; i++) {
                 snowFlakes.push({
                     x: Math.random()*width, 
@@ -664,15 +616,16 @@
                     sway: Math.random() * 0.5
                 });
             }
-            // Create Northern Lights segments
             for(let i=0; i<4; i++) northernLights.push({x:Math.random()*width, y:Math.random()*height*0.5, r:Math.random()*200+150, vx:(Math.random()-0.5)*0.1});
         }
 
         function updateWinter() {
             if(PERF_MODE) return;
+            // Always tick snow frames locally to ensure sway works even if game paused
+            let snowTick = Date.now() * 0.002; 
             for(let s of snowFlakes) { 
                 s.y += s.speed; 
-                s.x += Math.sin(frames * 0.01 + s.sway) * 0.5; // Swaying snow
+                s.x += Math.sin(snowTick + s.sway) * 0.5; 
                 if(s.y > height) { s.y = -10; s.x = Math.random() * width; }
             }
             for(let n of northernLights) { n.x+=n.vx; if(n.x<-200) n.x=width+200; if(n.x>width+200) n.x=-200; }
@@ -691,7 +644,6 @@
             grad.addColorStop(0, biome.bgTop); grad.addColorStop(1, biome.bgBot); 
             ctx.fillStyle=grad; ctx.fillRect(0,0,width,height);
 
-            // Draw Northern Lights
             for(let n of northernLights) { 
                 ctx.save(); ctx.globalCompositeOperation="screen"; 
                 let rg=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r); 
@@ -700,7 +652,6 @@
                 ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2); ctx.fill(); ctx.restore(); 
             }
 
-            // Draw Snow
             ctx.fillStyle = "#fff";
             for(let s of snowFlakes) { 
                 ctx.globalAlpha = 0.8; 
@@ -718,17 +669,15 @@
                 this.velocity += GRAVITY;
                 this.y += this.velocity;
                 if(frames % 4 === 0 && gameState === 'PLAY') {
-                    // Magical dust trail
                     trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0});
                     if(trail.length > 8) trail.shift();
                 }
                 if(gameState === 'PLAY') this.rotation += 2 + (SPEED * 0.3); 
             },
             draw: function() {
-                // Draw Trail (Sparkles)
                 for(let t of trail) {
                     ctx.save(); ctx.translate(t.x+this.size/2, t.y+this.size/2); 
-                    ctx.fillStyle = `rgba(255, 215, 0, ${t.alpha*0.5})`; // Gold sparkles
+                    ctx.fillStyle = `rgba(255, 215, 0, ${t.alpha*0.5})`; 
                     ctx.beginPath(); ctx.arc(0,0, this.size/2 * t.alpha, 0, Math.PI*2); ctx.fill();
                     ctx.restore();
                 }
@@ -737,26 +686,22 @@
                 ctx.translate(this.x+this.size/2, this.y+this.size/2); 
                 ctx.rotate(this.rotation*Math.PI/180);
 
-                // DRAW PLAYER: GIFT BOX
                 if(!PERF_MODE) { ctx.shadowBlur=15; ctx.shadowColor=`#ff0000`; }
                 
-                // Box Body
-                ctx.fillStyle = "#cc0000"; // Red
+                ctx.fillStyle = "#cc0000"; 
                 ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
                 
-                // Gold Ribbon
-                ctx.fillStyle = "#ffcc00"; // Gold
-                ctx.fillRect(-this.size/2, -4, this.size, 8); // Horizontal
-                ctx.fillRect(-4, -this.size/2, 8, this.size); // Vertical
+                ctx.fillStyle = "#ffcc00"; 
+                ctx.fillRect(-this.size/2, -4, this.size, 8); 
+                ctx.fillRect(-4, -this.size/2, 8, this.size); 
                 
-                // Outline
                 ctx.lineWidth=2; ctx.strokeStyle="#fff"; 
                 ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
                 
                 if(this.hasShield) {
                     ctx.beginPath();
                     ctx.lineWidth = 3;
-                    ctx.strokeStyle = `hsla(120, 100%, 70%, ${Math.abs(Math.sin(frames*0.1)) + 0.5})`; // Green Shield
+                    ctx.strokeStyle = `hsla(120, 100%, 70%, ${Math.abs(Math.sin(frames*0.1)) + 0.5})`;
                     ctx.arc(0, 0, this.size * 0.8, 0, Math.PI*2);
                     ctx.stroke();
                 }
@@ -851,12 +796,12 @@
                         // CANDY CANE STYLE
                         ctx.save();
                         
-                        // Top Pipe
-                        ctx.fillStyle = "#fff"; ctx.fillRect(p.x, 0, p.w, p.top);
-                        // Bottom Pipe
+                        // Main White body
+                        ctx.fillStyle = "#fff"; 
+                        ctx.fillRect(p.x, 0, p.w, p.top);
                         ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
                         
-                        // Stripes
+                        // Optimized Stripes
                         if (!PERF_MODE) {
                             ctx.beginPath();
                             ctx.rect(p.x, 0, p.w, p.top);
@@ -865,7 +810,10 @@
                             
                             ctx.strokeStyle = "#ff0000";
                             ctx.lineWidth = 15;
-                            for (let i = -50; i < height + 50; i += 30) {
+                            // Draw stripes only where pipes are visible (OPTIMIZED from last version)
+                            let startY = -50;
+                            let endY = height + 50;
+                            for (let i = startY; i < endY; i += 30) {
                                 ctx.beginPath();
                                 ctx.moveTo(p.x - 20, i);
                                 ctx.lineTo(p.x + p.w + 20, i + 40);
@@ -880,7 +828,7 @@
                         
                         ctx.restore();
                     } else {
-                        // CHIMNEY STYLE (Bricks)
+                        // CHIMNEY STYLE
                         ctx.fillStyle = "#883333";
                         ctx.fillRect(p.x, 0, p.w, p.top);
                         ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
@@ -890,12 +838,11 @@
                             ctx.beginPath(); ctx.rect(p.x, 0, p.w, p.top); ctx.rect(p.x, height - p.bottom, p.w, p.bottom); ctx.clip();
                             ctx.fillStyle = "#662222";
                             for(let y=0; y<height; y+=20) {
-                                ctx.fillRect(p.x, y, p.w, 2); // Mortar lines
-                                if ((y/20)%2 === 0) ctx.fillRect(p.x + 20, y, 2, 20); // Vertical lines
+                                ctx.fillRect(p.x, y, p.w, 2); 
+                                if ((y/20)%2 === 0) ctx.fillRect(p.x + 20, y, 2, 20); 
                             }
                             ctx.restore();
                             
-                            // Snow on top
                             ctx.fillStyle="#fff";
                             ctx.fillRect(p.x - 5, p.top - 10, p.w + 10, 10);
                             ctx.fillRect(p.x - 5, height - p.bottom, p.w + 10, 10);
@@ -918,7 +865,6 @@
             deathScoreDisplay.innerText = `SCORE: ${score}`;
             deathBestDisplay.innerText = `BEST: ${highScore}`;
 
-            // --- XMAS DEATH MESSAGES ---
             const msgElement = document.getElementById('death-msg');
             
             if (score > 500) msgElement.innerText = "SANTA IS AFRAID OF YOUR POWER."; 
@@ -1062,6 +1008,13 @@
         }
 
         function updatePhysics() {
+            // FIX: Background updates happen regardless of game state
+            if (!timeStopActive) {
+                bgOffset -= SPEED * 0.5; if(bgOffset < -100) bgOffset = 0;
+                globalHue = (globalHue + 1) % 360;
+                updateWinter(); // Snow now falls even on Menu
+            }
+
             if(gameState !== 'PLAY' && gameState !== 'DIE_ANIM') return;
             
             if (timeStopActive) {
@@ -1071,12 +1024,6 @@
                     canvas.classList.remove('time-frozen'); 
                     SFX.shieldUp();
                 }
-            }
-
-            if (!timeStopActive) {
-                bgOffset -= SPEED * 0.5; if(bgOffset < -100) bgOffset = 0;
-                globalHue = (globalHue + 1) % 360;
-                updateWinter();
             }
 
             frames++;
