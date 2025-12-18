@@ -31,14 +31,6 @@
             border: 4px solid #fff;
             border-radius: 12px;
             overflow: hidden;
-            transition: filter 0.5s, box-shadow 0.5s, border-color 0.5s;
-        }
-
-        /* GRINCH MODE EFFECT */
-        .grinch-mode {
-            filter: hue-rotate(120deg) contrast(1.2) !important; /* Turns Red -> Green */
-            border-color: #00ff00 !important;
-            box-shadow: 0 0 60px #00ff00 !important;
         }
 
         #debug-log {
@@ -230,6 +222,13 @@
             transition: opacity 0.1s; z-index: 50;
         }
         
+        /* FLASHBANG WHITE SCREEN */
+        #flashbang-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff; opacity: 0; pointer-events: none; z-index: 60;
+            transition: opacity 2.5s ease-out; /* Fade out time */
+        }
+        
         #warp-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(200,255,255,0.8) 100%);
@@ -243,7 +242,7 @@
     <div id="game-container-box">
         <div class="snow-overlay"></div>
         <div id="debug-log"></div>
-        <img id="bg-fail" src="fail.gif" class="bg-gif">
+        <div id="flashbang-overlay"></div> <img id="bg-fail" src="fail.gif" class="bg-gif">
         <img id="bg-win" src="win.gif" class="bg-gif">
 
         <canvas id="gameCanvas"></canvas>
@@ -353,6 +352,7 @@
         const scoreCounter = document.getElementById('score-counter');
         const wrapper = document.getElementById('game-container-box');
         const flashOverlay = document.getElementById('flash-overlay');
+        const flashbangOverlay = document.getElementById('flashbang-overlay'); // FLASHBANG ELEMENT
         const warpOverlay = document.getElementById('warp-overlay');
         const perfBtn = document.getElementById('perf-btn');
         
@@ -480,12 +480,9 @@
         BGM.loop = true;
         BGM.volume = 0.5;
         
-        // --- NEW FEATURES VARIABLES ---
+        // --- VARIABLES ---
         let timeStopActive = false;
         let timeStopTimer = 0;
-        
-        let grinchModeActive = false;
-        let grinchTimer = 0;
         
         let level1ShieldCount = 0;
         let level1ClockCount = 0;
@@ -519,7 +516,34 @@
             shieldUp: () => { playTone(440, 'triangle', 0.2, 0.1); playTone(554, 'triangle', 0.2, 0.1, 0.1); playTone(659, 'triangle', 0.3, 0.1, 0.2); },
             shieldBreak: () => { playTone(150, 'sawtooth', 0.3, 0.2); playTone(100, 'square', 0.3, 0.2, 0.05); },
             timeStop: () => { playTone(1000, 'sine', 1.0, 0.1); playTone(2000, 'triangle', 0.5, 0.1, 0.1); },
-            grinchStart: () => { playTone(100, 'sawtooth', 1.0, 0.3); playTone(80, 'square', 1.0, 0.3, 0.1); },
+            
+            // FLASHBANG AUDIO: White Noise Burst + Tinnitus Ring
+            flashbang: () => {
+                try {
+                    // 1. Noise Burst
+                    const bufferSize = audioCtx.sampleRate * 0.5; 
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buffer;
+                    const noiseGain = audioCtx.createGain();
+                    noiseGain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    noise.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+                    noise.start();
+
+                    // 2. High Ringing
+                    const osc = audioCtx.createOscillator();
+                    const oscGain = audioCtx.createGain();
+                    osc.type = 'sine'; osc.frequency.value = 3500;
+                    oscGain.gain.setValueAtTime(0.2, audioCtx.currentTime); 
+                    oscGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.5);
+                    osc.connect(oscGain); oscGain.connect(audioCtx.destination);
+                    osc.start(); osc.stop(audioCtx.currentTime + 2.5);
+                } catch(e) {}
+            },
+            
             win: () => {
                 let notes = [659, 659, 659, 0, 659, 659, 659, 0, 659, 783, 523, 587, 659];
                 notes.forEach((n, i) => { if(n>0) playTone(n, 'triangle', 0.3, 0.1, i*0.25); });
@@ -550,10 +574,7 @@
             play: () => { BGM.play().catch(e => console.log("Audio start req")); },
             stop: () => { BGM.pause(); BGM.currentTime = 0; },
             pause: () => { BGM.pause(); },
-            resume: () => { BGM.play(); },
-            grinchMode: (active) => {
-                BGM.playbackRate = active ? 0.75 : 1.0; // Slow down for Grinch
-            }
+            resume: () => { BGM.play(); }
         };
 
         // --- STATE & ASSETS ---
@@ -618,6 +639,15 @@
             if(PERF_MODE) return;
             flashOverlay.style.opacity = 0.8;
             setTimeout(() => { flashOverlay.style.opacity = 0; }, 50);
+        }
+        
+        function triggerFlashbang() {
+            flashbangOverlay.style.opacity = 1; // Instant White
+            SFX.flashbang();
+            if(!PERF_MODE) floatTexts.push({text: "FLASHBANG!", x: width/2, y: height/2, life: 3.0, vy: -1, color: '#ff0000', bg: '#fff'});
+            
+            // Fade out CSS
+            setTimeout(() => { flashbangOverlay.style.opacity = 0; }, 100); 
         }
         
         function warpScreen() {
@@ -707,9 +737,7 @@
             shieldCount: 0, 
             
             update: function() {
-                // GRAVITY LOGIC (Heavier in Grinch Mode)
-                let currentGravity = grinchModeActive ? 0.9 : GRAVITY;
-                this.velocity += currentGravity;
+                this.velocity += GRAVITY;
                 this.y += this.velocity;
                 
                 if(frames % 4 === 0 && gameState === 'PLAY') {
@@ -745,17 +773,17 @@
                 ctx.lineWidth=2; ctx.strokeStyle="#fff"; 
                 ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
                 
-                // SANTA HAT DRAWING
+                // SANTA HAT
                 ctx.save();
-                ctx.rotate(-Math.PI/2); // Rotate to sit on top relative to rotation
+                ctx.rotate(-Math.PI/2); 
                 ctx.translate(0, -this.size/2 - 5);
                 ctx.fillStyle = "#cc0000";
                 ctx.beginPath();
                 ctx.moveTo(-15, 0); ctx.lineTo(15, 0); ctx.lineTo(0, -25);
                 ctx.fill();
                 ctx.fillStyle = "#fff";
-                ctx.beginPath(); ctx.arc(0, -25, 6, 0, Math.PI*2); ctx.fill(); // Pom Pom
-                ctx.fillRect(-16, 0, 32, 6); // Brim
+                ctx.beginPath(); ctx.arc(0, -25, 6, 0, Math.PI*2); ctx.fill();
+                ctx.fillRect(-16, 0, 32, 6); 
                 ctx.restore();
 
                 // SHIELD DRAWING
@@ -808,11 +836,10 @@
                         spawnType = 'CLOCK';
                     }
                     
-                    // OPEN AIR MYSTERY BOX LOGIC (New)
-                    if (!spawnType && !timeStopActive && !grinchModeActive && Math.random() < 0.15) {
-                        // Spawn in the GAP between pipes
+                    // OPEN AIR MYSTERY BOX LOGIC
+                    if (!spawnType && !timeStopActive && Math.random() < 0.15) {
                         items.push({ 
-                            x: width + 100, // Offset so it's between pipes
+                            x: width + 100, 
                             y: Math.random() * (height - 200) + 100, 
                             type: 'MYSTERY', 
                             taken: false 
@@ -965,16 +992,6 @@
             }
         };
     
-        function triggerGrinchMode() {
-            if(grinchModeActive) return;
-            grinchModeActive = true;
-            grinchTimer = 60 * 8; // 8 seconds
-            wrapper.classList.add('grinch-mode');
-            MUSIC.grinchMode(true);
-            SFX.grinchStart();
-            if(!PERF_MODE) floatTexts.push({text: "GRINCH MODE!", x: width/2, y: height/2, life: 3.0, vy: -1});
-        }
-
         // --- CORE FUNCTIONS ---
         function die() {
             if(score > highScore) {
@@ -1091,8 +1108,7 @@
             currentBiome = 0; 
             
             timeStopActive = false;
-            grinchModeActive = false;
-            wrapper.classList.remove('grinch-mode');
+            flashbangOverlay.style.opacity = 0;
             canvas.classList.remove('time-frozen');
             level1ShieldCount = 0;
             level1ClockCount = 0;
@@ -1152,15 +1168,6 @@
                     SFX.shieldUp();
                 }
             }
-            
-            if(grinchModeActive) {
-                grinchTimer--;
-                if(grinchTimer <= 0) {
-                    grinchModeActive = false;
-                    wrapper.classList.remove('grinch-mode');
-                    MUSIC.grinchMode(false);
-                }
-            }
 
             frames++;
 
@@ -1188,18 +1195,18 @@
                            let prize = Math.random();
                            if (prize > 0.5) {
                                score += 5; SFX.score();
-                               floatTexts.push({text: "NICE! +5", x: player.x, y: player.y-40, life: 1.5, vy: -2});
+                               floatTexts.push({text: "NICE! +5", x: player.x, y: player.y-40, life: 1.5, vy: -2, color: '#00ff00'});
                            } else {
                                player.shieldCount++; SFX.shieldUp();
-                               floatTexts.push({text: "NICE! SHIELD", x: player.x, y: player.y-40, life: 1.5, vy: -2});
+                               floatTexts.push({text: "NICE! SHIELD", x: player.x, y: player.y-40, life: 1.5, vy: -2, color: '#00ff00'});
                            }
                        } else {
                            // NAUGHTY
                            if (Math.random() > 0.5) {
                                score = Math.max(0, score - 5);
-                               floatTexts.push({text: "COAL! -5", x: player.x, y: player.y-40, life: 1.5, vy: -2});
+                               floatTexts.push({text: "COAL! -5", x: player.x, y: player.y-40, life: 1.5, vy: -2, color: '#ff0000'});
                            } else {
-                               triggerGrinchMode();
+                               triggerFlashbang();
                            }
                        }
                    }
@@ -1235,8 +1242,24 @@
                 drawWinter();
                 
                 ctx.lineWidth = 4; for(let s of shockwaves) { ctx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`; ctx.beginPath(); ctx.arc(s.x+15, s.y+15, s.r, 0, Math.PI*2); ctx.stroke(); }
-                ctx.font = "900 24px 'Russo One'"; ctx.textAlign = "center";
-                for(let f of floatTexts) { ctx.save(); ctx.fillStyle = "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4; ctx.shadowBlur = 10; ctx.shadowColor = '#0f0'; ctx.globalAlpha = f.life; ctx.strokeText(f.text, f.x, f.y); ctx.fillText(f.text, f.x, f.y); ctx.restore(); }
+                
+                // MINI-POPUP RENDERING
+                for(let f of floatTexts) { 
+                    ctx.save(); 
+                    ctx.font = "900 18px 'Russo One'";
+                    let txtW = ctx.measureText(f.text).width + 20;
+                    
+                    // Box Background
+                    ctx.fillStyle = "rgba(0,0,0,0.8)";
+                    ctx.beginPath();
+                    // Fallback for rounded rect
+                    ctx.fillRect(f.x - txtW/2, f.y - 25, txtW, 35);
+                    
+                    ctx.fillStyle = f.color || "#fff"; 
+                    ctx.textAlign = "center";
+                    ctx.fillText(f.text, f.x, f.y); 
+                    ctx.restore(); 
+                }
                 
                 for(let item of items) {
                     ctx.save();
@@ -1257,7 +1280,7 @@
                         ctx.fillStyle = "#ffdd00"; // Gold
                         ctx.beginPath(); 
                         ctx.fillRect(item.x-15, item.y-15, 30, 30);
-                        ctx.fillStyle = "#ff0000"; ctx.font="bold 20px monospace"; ctx.fillText("?", item.x, item.y+7);
+                        ctx.fillStyle = "#ff0000"; ctx.font="bold 20px monospace"; ctx.textAlign="center"; ctx.fillText("?", item.x, item.y+7);
                     }
                     ctx.restore();
                 }
