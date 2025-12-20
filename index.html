@@ -45,6 +45,15 @@
             background: radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(10,20,40,0.3) 100%);
         }
 
+        /* NEW FROST EFFECT */
+        .frost-vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 8;
+            box-shadow: inset 0 0 80px rgba(200, 255, 255, 0.4);
+            background: radial-gradient(circle, transparent 60%, rgba(255, 255, 255, 0.15) 100%);
+            mix-blend-mode: overlay;
+        }
+
         .bg-gif {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover; opacity: 0; transition: opacity 0.5s;
@@ -234,6 +243,9 @@
 
     <div id="game-container-box">
         <div class="snow-overlay"></div>
+        <!-- ADDED FROST VIGNETTE HERE -->
+        <div class="frost-vignette"></div>
+
         <div id="debug-log"></div>
         <img id="bg-fail" src="fail.gif" class="bg-gif">
         <img id="bg-win" src="win.gif" class="bg-gif">
@@ -481,8 +493,6 @@
         
         let level1ShieldCount = 0;
         let level1ClockCount = 0;
-        
-        let villageScroll = 0; // NEW for Parallax
 
         function playTone(freq, type, duration, vol=0.1, delay=0) {
             try {
@@ -678,7 +688,6 @@
             for(let n of northernLights) { n.x+=n.vx; if(n.x<-200) n.x=width+200; if(n.x>width+200) n.x=-200; }
         }
 
-        // --- UPDATED BACKGROUND WITH VILLAGE ---
         function drawWinter() {
             const biome = BIOMES[currentBiome];
             
@@ -688,12 +697,10 @@
                 return;
             }
 
-            // 1. Sky Gradient
             let grad=ctx.createLinearGradient(0,0,0,height); 
             grad.addColorStop(0, biome.bgTop); grad.addColorStop(1, biome.bgBot); 
             ctx.fillStyle=grad; ctx.fillRect(0,0,width,height);
 
-            // 2. Northern Lights (Existing)
             for(let n of northernLights) { 
                 ctx.save(); ctx.globalCompositeOperation="screen"; 
                 let rg=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r); 
@@ -702,28 +709,6 @@
                 ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2); ctx.fill(); ctx.restore(); 
             }
 
-            // 3. VILLAGE SILHOUETTE (NEW)
-            if (!timeStopActive && gameState === 'PLAY') villageScroll -= 1; // Slow scroll
-            let vOffset = villageScroll % 200; 
-            
-            ctx.fillStyle = "rgba(0, 0, 0, 0.5)"; // Dark semi-transparent
-            ctx.beginPath();
-            ctx.moveTo(0, height);
-            // Draw procedural houses
-            for (let x = -200; x < width + 200; x += 50) {
-                let h = 40 + Math.sin(x * 932) * 20; // Random looking height
-                let drawX = x + vOffset;
-                // House base
-                ctx.lineTo(drawX, height - h);
-                ctx.lineTo(drawX + 30, height - h);
-                // Roof peak
-                ctx.lineTo(drawX + 15, height - h - 15);
-                ctx.lineTo(drawX + 30, height - h);
-            }
-            ctx.lineTo(width, height);
-            ctx.fill();
-
-            // 4. Snowflakes (Existing)
             ctx.fillStyle = "#fff";
             for(let s of snowFlakes) { 
                 ctx.globalAlpha = 0.8; 
@@ -732,7 +717,7 @@
             ctx.globalAlpha=1;
         }
 
-        // --- UPDATED PLAYER (GIFT BOX + SLEIGH) ---
+        // --- GAME OBJECTS ---
         const player = {
             x: 60, y: 200, size: 36, velocity: 0, rotation: 0,
             shieldCount: 0, 
@@ -741,91 +726,71 @@
                 this.velocity += GRAVITY;
                 this.y += this.velocity;
                 
-                // MAGIC DUST TRAIL
-                if(frames % 3 === 0 && gameState === 'PLAY') {
-                    // Randomly offset trail
-                    let offX = (Math.random() - 0.5) * 10;
-                    let offY = (Math.random() - 0.5) * 10;
-                    trail.push({
-                        x: this.x + offX, 
-                        y: this.y + offY, 
-                        rot: Math.random() * 360, 
-                        alpha: 1.0,
-                        type: Math.random() > 0.5 ? 'star' : 'dust' // Varied particles
-                    });
-                    if(trail.length > 12) trail.shift();
+                if(frames % 4 === 0 && gameState === 'PLAY') {
+                    trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0});
+                    if(trail.length > 8) trail.shift();
                 }
-                if(gameState === 'PLAY') this.rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (this.velocity * 0.1)));
+                if(gameState === 'PLAY') this.rotation += 2 + (SPEED * 0.3); 
             },
-
             draw: function() {
-                // DRAW TRAIL (Magic Dust)
                 for(let t of trail) {
-                    ctx.save();
-                    ctx.translate(t.x + this.size/2, t.y + this.size/2);
-                    ctx.globalAlpha = t.alpha;
-                    if(t.type === 'star') {
-                        ctx.fillStyle = "#ffff00"; // Gold sparks
-                        ctx.fillRect(0,0, 4, 4);
-                    } else {
-                        ctx.fillStyle = "#fff"; // White snow
-                        ctx.beginPath(); ctx.arc(0,0, 3, 0, Math.PI*2); ctx.fill();
+                    let r = Math.max(0, this.size/2 * t.alpha);
+                    if(r > 0) {
+                        ctx.save(); ctx.translate(t.x+this.size/2, t.y+this.size/2); 
+                        ctx.fillStyle = `rgba(255, 215, 0, ${t.alpha*0.5})`; 
+                        ctx.beginPath(); ctx.arc(0,0, r, 0, Math.PI*2); ctx.fill();
+                        ctx.restore();
                     }
-                    ctx.restore();
                 }
-                ctx.globalAlpha = 1;
 
                 ctx.save(); 
                 ctx.translate(this.x+this.size/2, this.y+this.size/2); 
-                ctx.rotate(this.rotation);
+                ctx.rotate(this.rotation*Math.PI/180);
 
                 if(!PERF_MODE) { ctx.shadowBlur=15; ctx.shadowColor=`#ff0000`; }
                 
-                // --- DRAW THE PLAYER AS A GIFT BOX ---
-                // Box Body
-                ctx.fillStyle = "#d40000"; // Christmas Red
+                ctx.fillStyle = "#cc0000"; 
                 ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
                 
-                // Ribbon (Vertical & Horizontal)
-                ctx.fillStyle = "#ffd700"; // Gold Ribbon
+                ctx.fillStyle = "#ffcc00"; 
                 ctx.fillRect(-this.size/2, -4, this.size, 8); 
                 ctx.fillRect(-4, -this.size/2, 8, this.size); 
                 
-                // Bow on top
-                ctx.fillStyle = "#ffd700";
-                ctx.beginPath();
-                ctx.arc(0, -this.size/2, 6, 0, Math.PI*2);
-                ctx.fill();
-                ctx.beginPath(); // Left loop
-                ctx.ellipse(-8, -this.size/2 - 4, 8, 4, -0.5, 0, Math.PI*2);
-                ctx.fill();
-                ctx.beginPath(); // Right loop
-                ctx.ellipse(8, -this.size/2 - 4, 8, 4, 0.5, 0, Math.PI*2);
-                ctx.fill();
-
+                ctx.lineWidth=2; ctx.strokeStyle="#fff"; 
+                ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+                
                 // SANTA HAT
                 ctx.save();
-                ctx.rotate(-0.2); 
-                ctx.translate(5, -this.size/2 - 10);
+                ctx.rotate(-Math.PI/2); 
+                ctx.translate(0, -this.size/2 - 5);
                 ctx.fillStyle = "#cc0000";
-                ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.lineTo(0, -20); ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(-15, 0); ctx.lineTo(15, 0); ctx.lineTo(0, -25);
+                ctx.fill();
                 ctx.fillStyle = "#fff";
-                ctx.beginPath(); ctx.arc(0, -20, 5, 0, Math.PI*2); ctx.fill();
-                ctx.fillRect(-11, 0, 22, 6); 
+                ctx.beginPath(); ctx.arc(0, -25, 6, 0, Math.PI*2); ctx.fill();
+                ctx.fillRect(-16, 0, 32, 6); 
                 ctx.restore();
 
-                // SHIELD DRAWING (Rudolph Nose Effect)
+                // SHIELD DRAWING
                 if(this.shieldCount > 0) {
-                    // Glowing Red Nose for Shield
-                    ctx.shadowBlur = 20; ctx.shadowColor = "#ff0000";
-                    ctx.fillStyle = `rgba(255, 0, 0, ${0.5 + Math.abs(Math.sin(frames*0.2))*0.5})`;
-                    ctx.beginPath(); ctx.arc(this.size/2, 0, 8 + (this.shieldCount*2), 0, Math.PI*2); ctx.fill();
-                    
-                    // Outer Shield Bubble
-                    ctx.shadowBlur = 0;
-                    ctx.strokeStyle = `rgba(0, 255, 0, 0.5)`;
-                    ctx.lineWidth = 2;
-                    ctx.beginPath(); ctx.arc(0, 0, this.size, 0, Math.PI*2); ctx.stroke();
+                    ctx.beginPath();
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = `hsla(120, 100%, 70%, ${Math.abs(Math.sin(frames*0.1)) + 0.5})`;
+                    ctx.arc(0, 0, this.size * 0.8 + (this.shieldCount*2), 0, Math.PI*2);
+                    ctx.stroke();
+                }
+
+                // --- ADDED RUDOLPH NOSE ---
+                if(!PERF_MODE) {
+                    ctx.save();
+                    ctx.translate(this.size/2 - 2, 0); // Move to front face
+                    ctx.fillStyle = "#ff0000";
+                    ctx.shadowColor = "#ff0000"; ctx.shadowBlur = 20;
+                    ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = "#fff"; ctx.shadowBlur = 0;
+                    ctx.beginPath(); ctx.arc(-1, -1, 1.5, 0, Math.PI*2); ctx.fill();
+                    ctx.restore();
                 }
                 
                 ctx.restore(); ctx.shadowBlur=0;
@@ -834,7 +799,7 @@
                 if(this.shieldCount > 0) {
                     ctx.fillStyle = "#00ff00";
                     ctx.font = "bold 16px monospace";
-                    ctx.fillText("x" + this.shieldCount, this.x, this.y - 25);
+                    ctx.fillText("x" + this.shieldCount, this.x + this.size/2, this.y - 20);
                 }
             }
         };
@@ -900,23 +865,17 @@
                     p.x -= SPEED;
                     
                     if (!timeStopActive) {
-                        // 1. If Orange Mode is ON, force normal pipes to move like anomalies
                         if (orangeModeActive && p.anomalySpeed === 0) {
                             p.anomalySpeed = (Math.random() < 0.5 ? 1 : -1) * 3;
                         }
-                        
-                        // 2. If Orange Mode ended, stop the forced movement for non-anomalies
                         if (!orangeModeActive && !p.isAnomaly && p.anomalySpeed !== 0) {
                             p.anomalySpeed = 0;
                         }
 
-                        // 3. Apply movement if it is an Anomaly OR Orange Mode is active
                         if (p.isAnomaly || orangeModeActive) {
                              p.top += p.anomalySpeed; p.bottom -= p.anomalySpeed; 
-                             // Bounce logic
                              if(p.top < 40 || p.top > height - GAP - 40) p.anomalySpeed *= -1;
                         } else {
-                            // Standard breathing logic
                             let wave = Math.sin(frames * p.breathSpeed + p.breathPhase);
                             let currentGap = GAP + (wave * p.breathAmp * 0.5); 
                             
@@ -968,80 +927,61 @@
                 if(this.list.length > 0 && this.list[0].x < -100) this.list.shift();
             },
             
-            // --- UPDATED OBSTACLES (CANDY CANES) ---
+            // --- UPDATED CANDY CANE DRAW FUNCTION ---
             draw: function() {
                 let era = Math.floor(score / 10) % 2; 
                 
                 for(let p of this.list) {
-                    // Determine border color based on state
                     let borderColor = "#aaa";
                     if (p.isAnomaly) borderColor = "#00ff00"; 
                     if (p.isTrap) borderColor = "#ffaa00"; 
                     if (p.hasBeenHit) borderColor = "#555";
                     if (orangeModeActive && !p.hasBeenHit) borderColor = "#ffaa00";
 
-                    // Draw Helper Function for Candy Cane Look
-                    const drawPipe = (x, y, w, h, isTop) => {
-                        // 1. Base White
-                        ctx.fillStyle = "#ffffff";
-                        ctx.fillRect(x, y, w, h);
-
-                        // 2. Red Stripes (Clipped)
-                        if (!PERF_MODE) {
-                            ctx.save();
-                            ctx.beginPath();
-                            ctx.rect(x, y, w, h);
-                            ctx.clip();
-                            
-                            ctx.fillStyle = "#cc0000";
-                            ctx.lineWidth = 10;
-                            // Draw diagonal stripes
-                            for (let i = y - w; i < y + h; i += 30) {
-                                ctx.beginPath();
-                                ctx.moveTo(x - 10, i);
-                                ctx.lineTo(x + w + 10, i + 30);
-                                ctx.lineTo(x + w + 10, i + 15);
-                                ctx.lineTo(x - 10, i - 15);
-                                ctx.fill();
-                            }
-                            ctx.restore();
-                        } else {
-                            // Simple mode: solid red block in middle
-                            ctx.fillStyle = "#cc0000";
-                            ctx.fillRect(x + 10, y, w - 20, h);
-                        }
-
-                        // 3. Snow Cap (Top of bottom pipe, Bottom of top pipe)
-                        ctx.fillStyle = "#fff";
-                        if (isTop) {
-                            // Snow hanging off the bottom of the top pipe
-                            ctx.beginPath();
-                            ctx.rect(x - 4, y + h - 15, w + 8, 15);
-                            ctx.fill();
-                            // Dripping effect
-                            for(let k=0; k<3; k++) {
-                                ctx.beginPath();
-                                ctx.arc(x + 10 + (k*15), y + h, 6, 0, Math.PI);
-                                ctx.fill();
-                            }
-                        } else {
-                            // Snow sitting on top of the bottom pipe
-                            ctx.beginPath();
-                            ctx.ellipse(x + w/2, y, w/2 + 5, 8, 0, 0, Math.PI*2);
-                            ctx.fill();
-                        }
-
-                        // 4. Border
-                        ctx.lineWidth = 3;
-                        ctx.strokeStyle = borderColor;
-                        ctx.strokeRect(x, y, w, h);
-                    };
-
-                    // Draw Top Pipe
-                    drawPipe(p.x, 0, p.w, p.top, true);
+                    // 1. Draw the Base (White)
+                    ctx.fillStyle = "#ffffff"; 
+                    ctx.fillRect(p.x, 0, p.w, p.top);
+                    ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
                     
-                    // Draw Bottom Pipe
-                    drawPipe(p.x, height - p.bottom, p.w, p.bottom, false);
+                    if (!PERF_MODE) {
+                        ctx.save();
+                        // Clip to the pipe area
+                        ctx.beginPath();
+                        ctx.rect(p.x, 0, p.w, p.top);
+                        ctx.rect(p.x, height - p.bottom, p.w, p.bottom);
+                        ctx.clip();
+                        
+                        // 2. Draw Candy Cane Stripes
+                        ctx.strokeStyle = "#ff0000";
+                        ctx.lineWidth = 12;
+                        ctx.beginPath();
+                        // Draw diagonal lines covering the whole height
+                        for (let i = -100; i < height + 100; i += 25) { 
+                            ctx.moveTo(p.x - 20, i);
+                            ctx.lineTo(p.x + p.w + 20, i + 40);
+                        }
+                        ctx.stroke();
+                        ctx.restore();
+
+                        // 3. Draw Snow Caps (Fluffy tops/bottoms)
+                        ctx.fillStyle = "#fff";
+                        // Snow on the bottom pipe
+                        ctx.beginPath();
+                        ctx.ellipse(p.x + p.w/2, height - p.bottom, p.w/2 + 4, 10, 0, 0, Math.PI*2);
+                        ctx.fill();
+                        
+                        // Icicles/Snow on top pipe
+                        ctx.beginPath();
+                        ctx.moveTo(p.x - 2, p.top);
+                        ctx.lineTo(p.x + p.w + 2, p.top);
+                        ctx.lineTo(p.x + p.w/2, p.top + 15); // Icicle point
+                        ctx.fill();
+                    }
+                    
+                    // 4. Border Outline
+                    ctx.lineWidth = 3; ctx.strokeStyle = borderColor;
+                    ctx.strokeRect(p.x, -2, p.w, p.top+2);
+                    ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2);
                 }
             }
         };
@@ -1166,7 +1106,6 @@
             canvas.classList.remove('time-frozen');
             level1ShieldCount = 0;
             level1ClockCount = 0;
-            villageScroll = 0; // Reset parallax
             
             if (isUnlocked) {
                 infiniteMode = true;
@@ -1372,8 +1311,23 @@
             if(gameState === 'START') startGame();
             else if(gameState === 'PLAY') {
                 player.velocity = -JUMP; SFX.jump();
+                
+                // --- NEW "HO HO HO" LOGIC ---
                 if(!PERF_MODE) {
                     for(let i=0; i<5; i++) particles.push({type: 'explode', x: player.x, y: player.y+player.size, vx: (Math.random()-0.5)*5, vy: Math.random()*5, life: 0.5, color: '#ff0', size: 3});
+                    
+                    // 20% chance to spawn text on jump
+                    if(Math.random() < 0.2) {
+                        floatTexts.push({
+                            text: "HO!", 
+                            x: player.x, 
+                            y: player.y - 30, 
+                            life: 1.0, 
+                            vy: -1.5, 
+                            color: '#ff0000', 
+                            bg: '#fff' 
+                        });
+                    }
                 }
             }
         }
