@@ -804,14 +804,15 @@
         const obstacles = {
             list: [],
             update: function() {
-                // --- DYNAMIC DIFFICULTY ---
-                // Speed increases by 0.08 every point, capped at 13
-                currentSpeed = Math.min(13, BASE_SPEED + (score * 0.08));
+                // 1. REBALANCED DIFFICULTY CURVE
+                // Speed increases slower, capped at 11 (Human reaction limit)
+                currentSpeed = Math.min(11, BASE_SPEED + (score * 0.06));
                 
-                // Gap decreases by 1.5 pixels every point, capped at minimum 110px
-                let dynamicGap = Math.max(110, BASE_GAP - (score * 1.5));
+                // Gap decreases, but hard-capped at 120px to prevent "Impossible Squeeze"
+                // (Unless it's an anomaly, which moves, so we keep the gap slightly wider)
+                let dynamicGap = Math.max(120, BASE_GAP - (score * 1.2));
                 
-                // Adjust spawn rate based on speed so spacing remains consistent-ish
+                // Adjust spawn rate
                 if(frames % Math.floor(55 * (7 / currentSpeed)) === 0) {
                     pipeSpawnCount++;
                     let minH = 60; 
@@ -819,23 +820,27 @@
                     let prevTop = (this.list.length > 0) ? this.list[this.list.length-1].top : (height - dynamicGap) / 2;
                     let direction = Math.random() < 0.5 ? 1 : -1;
                     if (prevTop < minH + 50) direction = 1; else if (prevTop > maxH - 50) direction = -1;
-                    let step = Math.floor(Math.random() * (220 - 60 + 1)) + 60;
+                    
+                    // Reduce step size slightly to prevent "Staircase" patterns that are too steep
+                    let step = Math.floor(Math.random() * (180 - 60 + 1)) + 60;
+                    
                     let topH = prevTop + (step * direction);
                     if(topH < minH) topH = minH + 20; if(topH > maxH) topH = maxH - 20;
                     
-                    // --- HYPER ACTIVE PIPES LOGIC ---
-                    // Anomaly chance scales with score
+                    // --- BALANCED CHAOS LOGIC ---
                     let anomalyChance = 0.2 + (score * 0.012);
                     let isAnomaly = Math.random() < anomalyChance;
                     
-                    // Anomaly speed scales with score
-                    let baseAnomalySpeed = 2;
-                    if(score > 30) baseAnomalySpeed = 3;
-                    if(score > 50) baseAnomalySpeed = 4.5;
+                    // CAP THE VERTICAL SPEED
+                    // Previous max was 4.5 (Too fast for gravity). New max is 3.2.
+                    let baseAnomalySpeed = 1.5;
+                    if(score > 30) baseAnomalySpeed = 2.2;
+                    if(score > 50) baseAnomalySpeed = 3.2;
                     
                     let anomalySpeed = isAnomaly ? (baseAnomalySpeed * (Math.random()<0.5?1:-1)) : 0;
                     let centerY = topH + (dynamicGap / 2);
 
+                    // --- Spawn Items Logic (Unchanged) ---
                     let spawnType = null;
                     if (!infiniteMode && level1ShieldCount < 2 && Math.random() < 0.1 && player.shieldCount === 0) {
                         spawnType = 'SHIELD'; level1ShieldCount++;
@@ -847,22 +852,17 @@
                     } else if (infiniteMode && pipeSpawnCount % 30 === 0 && !timeStopActive) {
                         spawnType = 'CLOCK';
                     }
-                    
                     if (!spawnType && !timeStopActive && Math.random() < 0.15) {
-                        items.push({ 
-                            x: width + 100, 
-                            y: Math.random() * (height - 200) + 100, 
-                            type: 'MYSTERY', 
-                            taken: false 
-                        });
+                        items.push({ x: width + 100, y: Math.random() * (height - 200) + 100, type: 'MYSTERY', taken: false });
                     }
-
-                    if (spawnType) {
-                        items.push({ x: width + 20, y: topH + (dynamicGap / 2), type: spawnType, taken: false });
-                    }
+                    if (spawnType) items.push({ x: width + 20, y: topH + (dynamicGap / 2), type: spawnType, taken: false });
+                    // -------------------------------------
                     
                     this.list.push({
-                        x: width, w: 55, top: topH, bottom: height-dynamicGap-topH, 
+                        x: width, w: 55, 
+                        top: topH, 
+                        bottom: height-dynamicGap-topH, 
+                        originalTop: topH, // MEMORY: Remember where we started
                         passed: false, 
                         isAnomaly: isAnomaly, 
                         anomalySpeed: anomalySpeed, 
@@ -872,7 +872,8 @@
                         breathAmp: 30 + Math.random() * 40,
                         isTrap: !isAnomaly && Math.random() < 0.3,
                         hasBeenHit: false,
-                        gapSize: dynamicGap
+                        gapSize: dynamicGap,
+                        moveRange: 80 // TETHER: Max pixels it can deviate from start
                     });
                 }
 
@@ -880,23 +881,32 @@
                     p.x -= currentSpeed;
                     
                     if (!timeStopActive) {
-                        // --- ORANGE MODE & ANOMALY PHYSICS ---
+                        // --- PHYSICS FIXES ---
                         
-                        // 1. If Orange Mode is ON, force normal pipes to move like anomalies
+                        // 1. Orange Mode / Anomaly Handling
                         if (orangeModeActive && p.anomalySpeed === 0) {
-                            p.anomalySpeed = (Math.random() < 0.5 ? 1 : -1) * 3;
+                            p.anomalySpeed = (Math.random() < 0.5 ? 1 : -1) * 2.5; // Reduced panic speed slightly
                         }
-                        
-                        // 2. If Orange Mode ended, stop the forced movement for non-anomalies
                         if (!orangeModeActive && !p.isAnomaly && p.anomalySpeed !== 0) {
                             p.anomalySpeed = 0;
                         }
 
-                        // 3. Apply movement
                         if (p.isAnomaly || orangeModeActive) {
-                             p.top += p.anomalySpeed; p.bottom -= p.anomalySpeed; 
-                             // Bounce logic
-                             if(p.top < 40 || p.top > height - p.gapSize - 40) p.anomalySpeed *= -1;
+                             p.top += p.anomalySpeed; 
+                             p.bottom -= p.anomalySpeed; 
+                             
+                             // 2. THE TETHER FIX
+                             // Instead of bouncing off the screen edges (which makes it fly away),
+                             // bounce off a "Leash" relative to where it spawned.
+                             // This guarantees the gap is always *near* the expected path.
+                             let upperLimit = p.originalTop - p.moveRange;
+                             let lowerLimit = p.originalTop + p.moveRange;
+                             
+                             // Also respect screen bounds
+                             if(p.top < 40 || p.top > height - p.gapSize - 40 || p.top < upperLimit || p.top > lowerLimit) {
+                                 p.anomalySpeed *= -1;
+                             }
+                             
                         } else {
                             // Standard breathing logic
                             let wave = Math.sin(frames * p.breathSpeed + p.breathPhase);
@@ -916,6 +926,7 @@
                         }
                     }
 
+                    // Collision Logic (Unchanged)
                     let pad = 8; 
                     if(!p.hasBeenHit && 
                        player.x + pad < p.x + p.w && 
@@ -923,10 +934,7 @@
                        (player.y + pad < p.top || player.y + player.size - pad > height - p.bottom)) {
                         
                         if (player.shieldCount > 0) {
-                            player.shieldCount--; 
-                            p.hasBeenHit = true; 
-                            SFX.shieldBreak(); 
-                            triggerShake();
+                            player.shieldCount--; p.hasBeenHit = true; SFX.shieldBreak(); triggerShake();
                             if(!PERF_MODE) {
                                 floatTexts.push({text: "SHIELD DOWN!", x: player.x, y: player.y-40, life: 1.5, vy: -1});
                                 for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#fff', size: 4});
@@ -940,10 +948,8 @@
                         score++; p.passed = true; SFX.score(); triggerShake();
                         if (infiniteMode) scoreCounter.innerText = score; else updateProgress();
                         switchBiome();
-                        
                         if(!PERF_MODE && p.isAnomaly) floatTexts.push({text: "MAGIC!", x: player.x, y: player.y-40, life: 1.2, vy: -3});
                         if(!PERF_MODE && p.isTrap) floatTexts.push({text: "CLOSE ONE!", x: player.x, y: player.y-40, life: 1.2, vy: -3});
-                        
                         if(!infiniteMode && score >= TARGET_SCORE) winGame();
                     }
                 }
@@ -951,70 +957,40 @@
             },
             
             draw: function() {
+                // ... (Draw function remains exactly the same as previous version) ...
+                // Copy the draw function from the previous code block or keep it if you are just replacing the 'obstacles' object
+                // If you need the draw code again let me know, but it is unchanged.
                 let era = Math.floor(score / 10) % 2; 
-                
                 for(let p of this.list) {
                     let activeColor = "#fff";
                     if (p.isAnomaly) activeColor = "#00ff00"; 
                     if (p.isTrap) activeColor = "#ffaa00"; 
                     if (p.hasBeenHit) activeColor = "#555";
-                    
                     if (orangeModeActive && !p.hasBeenHit) activeColor = "#ffaa00";
 
                     if (era === 0) {
-                        ctx.save();
-                        ctx.fillStyle = "#fff"; 
-                        ctx.fillRect(p.x, 0, p.w, p.top);
-                        ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
-                        
+                        ctx.save(); ctx.fillStyle = "#fff"; 
+                        ctx.fillRect(p.x, 0, p.w, p.top); ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
                         if (!PERF_MODE) {
-                            ctx.save();
-                            ctx.beginPath();
-                            ctx.rect(p.x, 0, p.w, p.top);
-                            ctx.rect(p.x, height - p.bottom, p.w, p.bottom);
-                            ctx.clip();
-                            
-                            ctx.strokeStyle = (activeColor === "#fff") ? "#ff0000" : activeColor;
-                            ctx.lineWidth = 15;
-                            ctx.beginPath();
-                            let startY = -50;
-                            let endY = height + 50;
-                            for (let i = startY; i < endY; i += 40) { 
-                                ctx.moveTo(p.x - 20, i);
-                                ctx.lineTo(p.x + p.w + 20, i + 40);
-                            }
-                            ctx.stroke();
-                            ctx.restore();
+                            ctx.save(); ctx.beginPath(); ctx.rect(p.x, 0, p.w, p.top); ctx.rect(p.x, height - p.bottom, p.w, p.bottom); ctx.clip();
+                            ctx.strokeStyle = (activeColor === "#fff") ? "#ff0000" : activeColor; ctx.lineWidth = 15; ctx.beginPath();
+                            for (let i = -50; i < height + 50; i += 40) { ctx.moveTo(p.x - 20, i); ctx.lineTo(p.x + p.w + 20, i + 40); }
+                            ctx.stroke(); ctx.restore();
                         }
-                        
                         ctx.lineWidth = 3; ctx.strokeStyle = activeColor;
-                        ctx.strokeRect(p.x, -2, p.w, p.top+2);
-                        ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2);
-                        ctx.restore();
+                        ctx.strokeRect(p.x, -2, p.w, p.top+2); ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2); ctx.restore();
                     } else {
-                        ctx.fillStyle = "#883333";
-                        ctx.fillRect(p.x, 0, p.w, p.top);
-                        ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
-                        
+                        ctx.fillStyle = "#883333"; ctx.fillRect(p.x, 0, p.w, p.top); ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
                         if(!PERF_MODE) {
-                            ctx.save();
-                            ctx.beginPath(); ctx.rect(p.x, 0, p.w, p.top); ctx.rect(p.x, height - p.bottom, p.w, p.bottom); ctx.clip();
+                            ctx.save(); ctx.beginPath(); ctx.rect(p.x, 0, p.w, p.top); ctx.rect(p.x, height - p.bottom, p.w, p.bottom); ctx.clip();
                             ctx.fillStyle = "#662222";
-                            for(let y=0; y<height; y+=30) {
-                                ctx.fillRect(p.x, y, p.w, 2); 
-                                if ((y/30)%2 === 0) ctx.fillRect(p.x + 20, y, 2, 30); 
-                            }
+                            for(let y=0; y<height; y+=30) { ctx.fillRect(p.x, y, p.w, 2); if ((y/30)%2 === 0) ctx.fillRect(p.x + 20, y, 2, 30); }
                             ctx.restore();
-                            
-                            ctx.fillStyle="#fff";
-                            ctx.fillRect(p.x - 5, p.top - 10, p.w + 10, 10);
-                            ctx.fillRect(p.x - 5, height - p.bottom, p.w + 10, 10);
+                            ctx.fillStyle="#fff"; ctx.fillRect(p.x - 5, p.top - 10, p.w + 10, 10); ctx.fillRect(p.x - 5, height - p.bottom, p.w + 10, 10);
                         }
-                        
                         if (p.isTrap || p.isAnomaly || orangeModeActive) {
                              ctx.lineWidth = 3; ctx.strokeStyle = activeColor;
-                             ctx.strokeRect(p.x, -2, p.w, p.top+2);
-                             ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2);
+                             ctx.strokeRect(p.x, -2, p.w, p.top+2); ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2);
                         }
                     }
                 }
@@ -1484,3 +1460,4 @@
     </script>
 </body>
 </html>
+
