@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>POWA-PROXY: TEST BUILD</title>
+    <title>POWA-PROXY: TEST BUILD (REBALANCED)</title>
     <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Russo+One&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -822,8 +822,14 @@
         const obstacles = {
             list: [],
             update: function() {
-                currentSpeed = Math.min(11, BASE_SPEED + (score * 0.06));
-                let dynamicGap = Math.max(120, BASE_GAP - (score * 1.2));
+                // --- REBALANCED PHYSICS (FAIR HARDCORE) ---
+                // Max Speed reduced to 9.5 (was 11)
+                // Ramp up is smoother (0.035 instead of 0.06)
+                currentSpeed = Math.min(9.5, BASE_SPEED + (score * 0.035));
+                
+                // Gap stops shrinking at 135px (was 120px)
+                // Slower shrink rate (0.8 instead of 1.2)
+                let dynamicGap = Math.max(135, BASE_GAP - (score * 0.8));
                 
                 if(frames % Math.floor(55 * (7 / currentSpeed)) === 0) {
                     pipeSpawnCount++;
@@ -931,11 +937,8 @@
                         
                         // --- GOD MODE CHECK ---
                         if (GOD_MODE) {
-                             // Show visual feedback that death was prevented
                              if(!PERF_MODE && frames % 10 === 0) floatTexts.push({text: "GOD MODE", x: player.x, y: player.y-40, life: 0.5, vy: -2, color: '#ffff00'});
-                             // Do nothing else (no death, no shield break)
                         } else {
-                            // Normal death logic
                             if (player.shieldCount > 0) {
                                 player.shieldCount--; p.hasBeenHit = true; SFX.shieldBreak(); triggerShake();
                                 if(!PERF_MODE) {
@@ -1000,7 +1003,6 @@
     
         // --- CORE FUNCTIONS ---
         function die() {
-            // High score tracking (Local only for God Mode test)
             if(score > highScore) {
                 highScore = score;
                 localStorage.setItem('powa-high-score', highScore);
