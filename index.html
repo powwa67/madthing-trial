@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>POWA-PROXY: JINGLE (HARDCORE)</title>
+    <title>POWA-PROXY: TEST BUILD</title>
     <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Russo+One&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -151,14 +151,17 @@
         #leaderboard-list::-webkit-scrollbar-track { background: #000; }
         #leaderboard-list::-webkit-scrollbar-thumb { background: #ff0000; border-radius: 3px; }
         
-        #perf-btn {
+        #perf-btn, #god-btn {
             background: rgba(0, 0, 0, 0.8); border: 2px solid #fff; color: #fff;
             font-family: 'Russo One', sans-serif; font-size: 1rem; padding: 10px 20px;
-            margin-top: 25px; cursor: pointer; border-radius: 8px;
+            margin-top: 15px; cursor: pointer; border-radius: 8px;
             text-transform: uppercase; transition: all 0.2s; pointer-events: auto; 
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); position: relative; z-index: 30; 
         }
-        #perf-btn:hover { background: #fff; color: #000; }
+        #perf-btn:hover, #god-btn:hover { background: #fff; color: #000; }
+
+        #god-btn { border-color: #ffaa00; color: #ffaa00; margin-top: 10px; }
+        #god-btn:hover { background: #ffaa00; color: #000; }
         
         .modal {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -260,7 +263,7 @@
                 <div id="leaderboard">
                     <div id="tab-container">
                         <button class="tab-btn active" onclick="switchTab('daily')">DAILY</button>
-                        <button class="tab-btn" onclick="switchTab('alltime')">ALL TIME</button>
+                        <button class="tab-btn" onclick="switchTab('weekly')">WEEKLY</button>
                     </div>
                     <div id="leaderboard-list">
                         <div style="text-align:center; color:#0f0; animation: blink 1s infinite; padding-top:20px;">CONNECTING TO NORTH POLE...</div>
@@ -272,7 +275,9 @@
                     <span style="font-size:0.7rem; color:#fff;">CHECK BACK TOMORROW</span>
                 </div>
                 <div style="color:#d4af37; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #d4af37; animation:blink 0.5s infinite alternate;">TAP TO SLEIGH</div>
+                
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: FANCY</button>
+                <button id="god-btn" onclick="toggleGod(event)">GOD MODE: OFF</button>
             </div>
         </div>
             
@@ -347,6 +352,7 @@
         const flashOverlay = document.getElementById('flash-overlay');
         const warpOverlay = document.getElementById('warp-overlay');
         const perfBtn = document.getElementById('perf-btn');
+        const godBtn = document.getElementById('god-btn');
         
         const deathModal = document.getElementById('death-modal');
         const winModal = document.getElementById('win-modal');
@@ -379,7 +385,7 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- GAME CONFIG (DYNAMIC) ---
+        // --- GAME CONFIG ---
         const KEY_ID = "day_23"; 
         const KEY_WARNING_MODE = "OFF"; 
         const WORKER_URL = "https://powa-vault.powwa.workers.dev"; 
@@ -389,13 +395,13 @@
         // Dynamic Difficulty Variables
         let BASE_SPEED = 7;
         let currentSpeed = 7;
-        
         let BASE_GAP = 170;
-        
         let GRAVITY = 0.6;
         let JUMP = 8.5;
         
         let PERF_MODE = false;
+        let GOD_MODE = false;
+        let usedGodMode = false;
 
         let gameStartTime = 0;
 
@@ -433,7 +439,15 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
-        // SERVER FETCH
+        // --- HELPERS ---
+        function getWeekId() {
+            const d = new Date();
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            const weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+            return `week_${d.getUTCFullYear()}_${weekNo}`;
+        }
+
         async function fetchServerKey() {
             const keyTextBox = document.getElementById('key-text');
             if (gameStartTime === 0 || score === 0) {
@@ -505,10 +519,8 @@
 
         const SFX = {
             jump: () => {
-                // JINGLE EFFECT LAYERING
-                playTone(1200, 'sine', 0.1, 0.05); // Base Jump
+                playTone(1200, 'sine', 0.1, 0.05); 
                 playTone(1500, 'triangle', 0.1, 0.05, 0.02);
-                // SLEIGH BELLS
                 playTone(2000, 'sine', 0.1, 0.05, 0); 
                 playTone(2500, 'sine', 0.1, 0.03, 0.05);
                 playTone(3000, 'sine', 0.1, 0.02, 0.1);
@@ -517,13 +529,10 @@
             shieldUp: () => { playTone(440, 'triangle', 0.2, 0.1); playTone(554, 'triangle', 0.2, 0.1, 0.1); playTone(659, 'triangle', 0.3, 0.1, 0.2); },
             shieldBreak: () => { playTone(150, 'sawtooth', 0.3, 0.2); playTone(100, 'square', 0.3, 0.2, 0.05); },
             timeStop: () => { playTone(1000, 'sine', 1.0, 0.1); playTone(2000, 'triangle', 0.5, 0.1, 0.1); },
-            
-            // PANIC ALARM SOUND
             panic: () => {
                 playTone(100, 'sawtooth', 1.0, 0.3); 
                 playTone(80, 'square', 1.0, 0.3, 0.1);
             },
-            
             win: () => {
                 let notes = [659, 659, 659, 0, 659, 659, 659, 0, 659, 783, 523, 587, 659];
                 notes.forEach((n, i) => { if(n>0) playTone(n, 'triangle', 0.3, 0.1, i*0.25); });
@@ -578,7 +587,7 @@
         let lastTime = 0;
         let accumulator = 0;
 
-        // --- HELPERS ---
+        // --- HELPERS 2 ---
         async function copyKey(elementId, btnElement) {
             const text = document.getElementById(elementId).innerText;
             try {
@@ -608,6 +617,20 @@
             }
         };
 
+        // --- GOD MODE TOGGLE ---
+        window.toggleGod = function(e) {
+            e.stopPropagation();
+            GOD_MODE = !GOD_MODE;
+            if (GOD_MODE) {
+                godBtn.innerText = "GOD MODE: ON";
+                godBtn.style.color = "#00ff00";
+                usedGodMode = true; // Flag the run as tainted
+            } else {
+                godBtn.innerText = "GOD MODE: OFF";
+                godBtn.style.color = "#ffaa00";
+            }
+        };
+
         function triggerShake() {
             if(PERF_MODE) return;
             wrapper.classList.remove('shake-small');
@@ -621,11 +644,10 @@
             setTimeout(() => { flashOverlay.style.opacity = 0; }, 50);
         }
         
-        // --- ORANGE MODE LOGIC ---
         function triggerOrangeMode() {
             if(orangeModeActive) return;
             orangeModeActive = true;
-            orangeModeTimer = 60 * 5; // 5 Seconds
+            orangeModeTimer = 60 * 5; 
             SFX.panic();
             if(!PERF_MODE) floatTexts.push({text: "PANIC! ALL ORANGE!", x: width/2, y: height/2, life: 3.0, vy: -1, color: '#ff0000', bg: '#fff'});
         }
@@ -717,11 +739,8 @@
             shieldCount: 0, 
             
             update: function() {
-                // Risk vs Reward: Heavier with more shields
                 this.velocity += GRAVITY + (this.shieldCount * 0.05);
 
-                // --- BLIZZARD MECHANIC ---
-                // Random wind gusts after score 10
                 if (gameState === 'PLAY' && score > 10 && Math.random() < 0.02) {
                     let windForce = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 3 + 1);
                     this.velocity += windForce;
@@ -792,7 +811,6 @@
                 
                 ctx.restore(); ctx.shadowBlur=0;
                 
-                // DRAW SHIELD COUNT NUMBER
                 if(this.shieldCount > 0) {
                     ctx.fillStyle = "#00ff00";
                     ctx.font = "bold 16px monospace";
@@ -804,15 +822,9 @@
         const obstacles = {
             list: [],
             update: function() {
-                // 1. REBALANCED DIFFICULTY CURVE
-                // Speed increases slower, capped at 11 (Human reaction limit)
                 currentSpeed = Math.min(11, BASE_SPEED + (score * 0.06));
-                
-                // Gap decreases, but hard-capped at 120px to prevent "Impossible Squeeze"
-                // (Unless it's an anomaly, which moves, so we keep the gap slightly wider)
                 let dynamicGap = Math.max(120, BASE_GAP - (score * 1.2));
                 
-                // Adjust spawn rate
                 if(frames % Math.floor(55 * (7 / currentSpeed)) === 0) {
                     pipeSpawnCount++;
                     let minH = 60; 
@@ -821,18 +833,14 @@
                     let direction = Math.random() < 0.5 ? 1 : -1;
                     if (prevTop < minH + 50) direction = 1; else if (prevTop > maxH - 50) direction = -1;
                     
-                    // Reduce step size slightly to prevent "Staircase" patterns that are too steep
                     let step = Math.floor(Math.random() * (180 - 60 + 1)) + 60;
                     
                     let topH = prevTop + (step * direction);
                     if(topH < minH) topH = minH + 20; if(topH > maxH) topH = maxH - 20;
                     
-                    // --- BALANCED CHAOS LOGIC ---
                     let anomalyChance = 0.2 + (score * 0.012);
                     let isAnomaly = Math.random() < anomalyChance;
                     
-                    // CAP THE VERTICAL SPEED
-                    // Previous max was 4.5 (Too fast for gravity). New max is 3.2.
                     let baseAnomalySpeed = 1.5;
                     if(score > 30) baseAnomalySpeed = 2.2;
                     if(score > 50) baseAnomalySpeed = 3.2;
@@ -840,7 +848,6 @@
                     let anomalySpeed = isAnomaly ? (baseAnomalySpeed * (Math.random()<0.5?1:-1)) : 0;
                     let centerY = topH + (dynamicGap / 2);
 
-                    // --- Spawn Items Logic (Unchanged) ---
                     let spawnType = null;
                     if (!infiniteMode && level1ShieldCount < 2 && Math.random() < 0.1 && player.shieldCount === 0) {
                         spawnType = 'SHIELD'; level1ShieldCount++;
@@ -856,13 +863,12 @@
                         items.push({ x: width + 100, y: Math.random() * (height - 200) + 100, type: 'MYSTERY', taken: false });
                     }
                     if (spawnType) items.push({ x: width + 20, y: topH + (dynamicGap / 2), type: spawnType, taken: false });
-                    // -------------------------------------
                     
                     this.list.push({
                         x: width, w: 55, 
                         top: topH, 
                         bottom: height-dynamicGap-topH, 
-                        originalTop: topH, // MEMORY: Remember where we started
+                        originalTop: topH, 
                         passed: false, 
                         isAnomaly: isAnomaly, 
                         anomalySpeed: anomalySpeed, 
@@ -873,7 +879,7 @@
                         isTrap: !isAnomaly && Math.random() < 0.3,
                         hasBeenHit: false,
                         gapSize: dynamicGap,
-                        moveRange: 80 // TETHER: Max pixels it can deviate from start
+                        moveRange: 80 
                     });
                 }
 
@@ -881,11 +887,8 @@
                     p.x -= currentSpeed;
                     
                     if (!timeStopActive) {
-                        // --- PHYSICS FIXES ---
-                        
-                        // 1. Orange Mode / Anomaly Handling
                         if (orangeModeActive && p.anomalySpeed === 0) {
-                            p.anomalySpeed = (Math.random() < 0.5 ? 1 : -1) * 2.5; // Reduced panic speed slightly
+                            p.anomalySpeed = (Math.random() < 0.5 ? 1 : -1) * 2.5; 
                         }
                         if (!orangeModeActive && !p.isAnomaly && p.anomalySpeed !== 0) {
                             p.anomalySpeed = 0;
@@ -895,20 +898,14 @@
                              p.top += p.anomalySpeed; 
                              p.bottom -= p.anomalySpeed; 
                              
-                             // 2. THE TETHER FIX
-                             // Instead of bouncing off the screen edges (which makes it fly away),
-                             // bounce off a "Leash" relative to where it spawned.
-                             // This guarantees the gap is always *near* the expected path.
                              let upperLimit = p.originalTop - p.moveRange;
                              let lowerLimit = p.originalTop + p.moveRange;
                              
-                             // Also respect screen bounds
                              if(p.top < 40 || p.top > height - p.gapSize - 40 || p.top < upperLimit || p.top > lowerLimit) {
                                  p.anomalySpeed *= -1;
                              }
                              
                         } else {
-                            // Standard breathing logic
                             let wave = Math.sin(frames * p.breathSpeed + p.breathPhase);
                             let currentGap = p.gapSize + (wave * p.breathAmp * 0.5); 
                             
@@ -926,21 +923,28 @@
                         }
                     }
 
-                    // Collision Logic (Unchanged)
                     let pad = 8; 
                     if(!p.hasBeenHit && 
                        player.x + pad < p.x + p.w && 
                        player.x + player.size - pad > p.x && 
                        (player.y + pad < p.top || player.y + player.size - pad > height - p.bottom)) {
                         
-                        if (player.shieldCount > 0) {
-                            player.shieldCount--; p.hasBeenHit = true; SFX.shieldBreak(); triggerShake();
-                            if(!PERF_MODE) {
-                                floatTexts.push({text: "SHIELD DOWN!", x: player.x, y: player.y-40, life: 1.5, vy: -1});
-                                for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#fff', size: 4});
-                            }
+                        // --- GOD MODE CHECK ---
+                        if (GOD_MODE) {
+                             // Show visual feedback that death was prevented
+                             if(!PERF_MODE && frames % 10 === 0) floatTexts.push({text: "GOD MODE", x: player.x, y: player.y-40, life: 0.5, vy: -2, color: '#ffff00'});
+                             // Do nothing else (no death, no shield break)
                         } else {
-                            die();
+                            // Normal death logic
+                            if (player.shieldCount > 0) {
+                                player.shieldCount--; p.hasBeenHit = true; SFX.shieldBreak(); triggerShake();
+                                if(!PERF_MODE) {
+                                    floatTexts.push({text: "SHIELD DOWN!", x: player.x, y: player.y-40, life: 1.5, vy: -1});
+                                    for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#fff', size: 4});
+                                }
+                            } else {
+                                die();
+                            }
                         }
                     }
 
@@ -957,9 +961,6 @@
             },
             
             draw: function() {
-                // ... (Draw function remains exactly the same as previous version) ...
-                // Copy the draw function from the previous code block or keep it if you are just replacing the 'obstacles' object
-                // If you need the draw code again let me know, but it is unchanged.
                 let era = Math.floor(score / 10) % 2; 
                 for(let p of this.list) {
                     let activeColor = "#fff";
@@ -999,6 +1000,7 @@
     
         // --- CORE FUNCTIONS ---
         function die() {
+            // High score tracking (Local only for God Mode test)
             if(score > highScore) {
                 highScore = score;
                 localStorage.setItem('powa-high-score', highScore);
@@ -1121,6 +1123,13 @@
             level1ShieldCount = 0;
             level1ClockCount = 0;
             
+            // God Mode Persistence Logic
+            if(GOD_MODE) {
+                usedGodMode = true; // If starting with God Mode, run is tainted
+            } else {
+                usedGodMode = false; // Fresh run
+            }
+            
             if (isUnlocked) {
                 infiniteMode = true;
                 progressContainer.style.display = 'none';
@@ -1242,7 +1251,16 @@
             if(gameState === 'PLAY') {
                 obstacles.update();
                 player.update();
-                if(player.y > height || player.y < -50) die();
+                if(player.y > height || player.y < -50) {
+                     // GOD MODE FOR FLOOR/CEILING DEATH
+                     if (GOD_MODE) {
+                         if (player.y > height) player.y = height - 10;
+                         if (player.y < -50) player.y = -40;
+                         player.velocity = 0;
+                     } else {
+                         die();
+                     }
+                }
             }
         }
 
@@ -1318,6 +1336,7 @@
         function handleInput(e) {
             if(e.type === 'keydown' && e.code === 'Space') e.preventDefault();
             if(e.target.id === 'perf-btn') return;
+            if(e.target.id === 'god-btn') return;
             if(e.target.closest('#leaderboard')) return;
             if(e.target.closest('.win-input-field')) return; 
 
@@ -1368,7 +1387,12 @@
 
             if(currentLeaderboardListener) currentLeaderboardListener(); 
 
-            const collectionName = (mode === 'daily') ? `leaderboard_${KEY_ID}` : "leaderboard";
+            let collectionName;
+            if (mode === 'daily') {
+                collectionName = `leaderboard_${KEY_ID}`;
+            } else {
+                collectionName = `leaderboard_${getWeekId()}`;
+            }
 
             currentLeaderboardListener = db.collection(collectionName)
                 .orderBy("score", "desc")
@@ -1423,6 +1447,18 @@
 
             if(score===0 && !isAuto) { alert("Play first!"); return; }
             
+            // --- GOD MODE SAFETY CHECK ---
+            // If the user used God Mode at any point, do NOT submit to the database.
+            if(usedGodMode) {
+                if(submitBtn) {
+                    submitBtn.innerText = "TEST MODE (UNRANKED)";
+                    submitBtn.style.background = "#555";
+                    submitBtn.disabled = true;
+                }
+                console.log("Score submission blocked due to God Mode usage.");
+                return;
+            }
+
             let scoreToSend = parseInt(score, 10);
             
             if(submitBtn) {
@@ -1432,9 +1468,10 @@
             }
 
             const dailyCollection = `leaderboard_${KEY_ID}`;
+            const weeklyCollection = `leaderboard_${getWeekId()}`;
             
             Promise.all([
-                submitToCollection("leaderboard", name, scoreToSend),   
+                submitToCollection(weeklyCollection, name, scoreToSend),   
                 submitToCollection(dailyCollection, name, scoreToSend)
             ]).then(() => {
                 if(submitBtn) {
@@ -1460,5 +1497,3 @@
     </script>
 </body>
 </html>
-
-
