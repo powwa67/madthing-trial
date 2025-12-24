@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>POWA-PROXY: JINGLE (WEEKLY)</title>
+    <title>POWA-PROXY: MERRY XMAS</title>
     <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Russo+One&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -27,7 +27,7 @@
         #game-container-box {
             position: relative;
             background: #000;
-            box-shadow: 0 0 40px rgba(255, 0, 0, 0.4);
+            box-shadow: 0 0 40px rgba(212, 175, 55, 0.4); /* GOLD GLOW FOR XMAS */
             border: 4px solid #fff;
             border-radius: 12px;
             overflow: hidden;
@@ -89,7 +89,7 @@
 
         #progress-fill {
             width: 0%; height: 100%; 
-            background: repeating-linear-gradient(45deg, #ff0000, #ff0000 10px, #ffffff 10px, #ffffff 20px);
+            background: repeating-linear-gradient(45deg, #d4af37, #d4af37 10px, #ffffff 10px, #ffffff 20px); /* GOLD STRIPES */
             transition: width 0.1s linear; box-shadow: 0 0 10px #fff;
         }
         
@@ -109,14 +109,15 @@
         }
 
         h1 {
-            color: #ff0000; font-size: 3.5rem; margin: 0; line-height: 0.95;
-            text-shadow: 3px 3px 0 #fff, 6px 6px 0 #008800;
+            color: #d4af37; /* GOLD TITLE */
+            font-size: 3.5rem; margin: 0; line-height: 0.95;
+            text-shadow: 3px 3px 0 #fff, 0 0 30px #ff0000;
             font-family: 'Mountains of Christmas', cursive; 
             letter-spacing: 2px;
         }
         
         .high-score-label {
-            color: #d4af37; font-size: 1.2rem; margin-top: 10px;
+            color: #fff; font-size: 1.2rem; margin-top: 10px;
             text-shadow: 0 0 10px #d4af37; letter-spacing: 1px;
         }
 
@@ -243,7 +244,7 @@
         <div id="warp-overlay"></div>
         
         <div id="ui-layer">
-            <div id="countdown" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:8rem; color:#ff0000; text-shadow:2px 2px 0 #fff, 0 0 40px #ff0000; z-index:100; font-family:'Mountains of Christmas'; pointer-events:none;">3</div>
+            <div id="countdown" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:8rem; color:#d4af37; text-shadow:2px 2px 0 #fff, 0 0 40px #d4af37; z-index:100; font-family:'Mountains of Christmas'; pointer-events:none;">3</div>
             <div id="top-bar">
                 <div id="progress-container">
                     <div id="progress-bar">
@@ -254,7 +255,7 @@
             </div>
 
             <div id="main-menu">
-                <h1 id="title" class="glitch-anim">POWA<br>JINGLE</h1>
+                <h1 id="title" class="glitch-anim">MERRY<br>X-MAS</h1>
                 <div id="menu-high-score" class="high-score-label">BEST: 0</div>
                 
                 <div id="leaderboard">
@@ -380,11 +381,11 @@
         resize();
 
         // --- GAME CONFIG (UPDATED) ---
-        const KEY_ID = "day_23"; 
+        const KEY_ID = "day_25"; 
         const KEY_WARNING_MODE = "OFF"; 
         const WORKER_URL = "https://powa-vault.powwa.workers.dev"; 
 
-        let TARGET_SCORE = 50; 
+        let TARGET_SCORE = 40; 
         
         // Dynamic Difficulty Variables
         let BASE_SPEED = 7;
@@ -392,6 +393,7 @@
         let BASE_GAP = 170;
         let GRAVITY = 0.6;
         let JUMP = 8.5;
+        let difficultyOffset = 0; 
         
         let PERF_MODE = false;
 
@@ -661,7 +663,8 @@
         function initWinter() {
             if(PERF_MODE) return;
             snowFlakes = []; northernLights = [];
-            for(let i=0; i<150; i++) {
+            // CHRISTMAS MODE: DOUBLE SNOW (300 instead of 150)
+            for(let i=0; i<300; i++) {
                 snowFlakes.push({
                     x: Math.random()*width, 
                     y: Math.random()*height, 
@@ -722,8 +725,6 @@
                 // Risk vs Reward: Heavier with more shields
                 this.velocity += GRAVITY + (this.shieldCount * 0.05);
                 
-                // NO WIND MECHANIC HERE
-                
                 this.y += this.velocity;
                 
                 if(frames % 4 === 0 && gameState === 'PLAY') {
@@ -747,9 +748,10 @@
                 ctx.translate(this.x+this.size/2, this.y+this.size/2); 
                 ctx.rotate(this.rotation*Math.PI/180);
 
-                if(!PERF_MODE) { ctx.shadowBlur=15; ctx.shadowColor=`#ff0000`; }
+                if(!PERF_MODE) { ctx.shadowBlur=15; ctx.shadowColor=`#d4af37`; }
                 
-                ctx.fillStyle = "#cc0000"; 
+                // CHRISTMAS MODE: GOLD PLAYER
+                ctx.fillStyle = "#d4af37"; 
                 ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
                 
                 ctx.fillStyle = "#ffcc00"; 
@@ -795,14 +797,18 @@
         const obstacles = {
             list: [],
             update: function() {
-                // --- REBALANCED PHYSICS (FAIR HARDCORE) ---
-                // Max Speed reduced to 9.5 (was 11)
-                // Ramp up is smoother (0.035 instead of 0.06)
-                currentSpeed = Math.min(9.5, BASE_SPEED + (score * 0.035));
+                // --- SMART SPEED LOGIC ---
+                // 1. Calculate Score minus the starting offset (so infinite mode starts slow)
+                let effectiveScore = score - difficultyOffset;
+
+                // 2. Set Max Speed: 10 for normal game, 8 for infinite
+                let speedLimit = infiniteMode ? 8 : 10; 
                 
-                // Gap stops shrinking at 135px (was 120px)
-                // Slower shrink rate (0.8 instead of 1.2)
-                let dynamicGap = Math.max(135, BASE_GAP - (score * 0.8));
+                // 3. Apply the speed with the limit
+                currentSpeed = Math.min(speedLimit, BASE_SPEED + (effectiveScore * 0.06));
+                
+                // Gap decreases, but hard-capped at 120px to prevent "Impossible Squeeze"
+                let dynamicGap = Math.max(120, BASE_GAP - (score * 1.2));
                 
                 // Adjust spawn rate
                 if(frames % Math.floor(55 * (7 / currentSpeed)) === 0) {
@@ -820,11 +826,11 @@
                     if(topH < minH) topH = minH + 20; if(topH > maxH) topH = maxH - 20;
                     
                     // --- BALANCED CHAOS LOGIC ---
-                    let anomalyChance = 0.2 + (score * 0.012);
+                    // Capped to 0.6 (60%) so it doesn't become impossible in infinite mode.
+                    let anomalyChance = Math.min(0.6, 0.2 + (score * 0.012));
                     let isAnomaly = Math.random() < anomalyChance;
                     
                     // CAP THE VERTICAL SPEED
-                    // Previous max was 4.5 (Too fast for gravity). New max is 3.2.
                     let baseAnomalySpeed = 1.5;
                     if(score > 30) baseAnomalySpeed = 2.2;
                     if(score > 50) baseAnomalySpeed = 3.2;
@@ -913,21 +919,48 @@
                         }
                     }
 
-                    // Collision Logic
-                    let pad = 8; 
-                    if(!p.hasBeenHit && 
-                       player.x + pad < p.x + p.w && 
-                       player.x + player.size - pad > p.x && 
-                       (player.y + pad < p.top || player.y + player.size - pad > height - p.bottom)) {
-                        
-                        if (player.shieldCount > 0) {
-                            player.shieldCount--; p.hasBeenHit = true; SFX.shieldBreak(); triggerShake();
-                            if(!PERF_MODE) {
-                                floatTexts.push({text: "SHIELD DOWN!", x: player.x, y: player.y-40, life: 1.5, vy: -1});
-                                for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#fff', size: 4});
+                    // --- NEW FORGIVING COLLISION LOGIC ---
+                    if (!p.hasBeenHit) {
+                        // 1. Define the Player's Circular Hitbox
+                        // We shrink the radius by 6px to create the "Forgiveness"
+                        // The player is 36px wide. The hit radius becomes 12px.
+                        // This allows the visual corners of the box to clip through pipes safely.
+                        let hitRadius = (player.size / 2) - 6; 
+                        let playerCx = player.x + (player.size / 2);
+                        let playerCy = player.y + (player.size / 2);
+
+                        // 2. Helper Function: Circle vs Rectangle Collision
+                        // Checks if the circle is touching the Top Pipe or Bottom Pipe
+                        const checkHit = (rectX, rectY, rectW, rectH) => {
+                            // Find the point on the rectangle closest to the circle center
+                            let closestX = Math.max(rectX, Math.min(playerCx, rectX + rectW));
+                            let closestY = Math.max(rectY, Math.min(playerCy, rectY + rectH));
+
+                            // Calculate the distance between the circle center and that closest point
+                            let distanceX = playerCx - closestX;
+                            let distanceY = playerCy - closestY;
+
+                            // If distance is less than radius, we have a hit
+                            return (distanceX * distanceX + distanceY * distanceY) < (hitRadius * hitRadius);
+                        };
+
+                        // 3. Perform the checks
+                        let hitTop = checkHit(p.x, 0, p.w, p.top);
+                        let hitBot = checkHit(p.x, height - p.bottom, p.w, p.bottom);
+
+                        if (hitTop || hitBot) {
+                            if (player.shieldCount > 0) {
+                                player.shieldCount--; 
+                                p.hasBeenHit = true; 
+                                SFX.shieldBreak(); 
+                                triggerShake();
+                                if(!PERF_MODE) {
+                                    floatTexts.push({text: "SHIELD DOWN!", x: player.x, y: player.y-40, life: 1.5, vy: -1});
+                                    for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#fff', size: 4});
+                                }
+                            } else {
+                                die();
                             }
-                        } else {
-                            die();
                         }
                     }
 
@@ -1058,6 +1091,7 @@
         window.continueGame = function() {
             infiniteMode = true;
             isUnlocked = true; 
+            difficultyOffset = score; // RESET DIFFICULTY CURVE
             localStorage.setItem('powa-unlocked', 'true');
             winModal.style.display = 'none';
             bgWin.style.opacity = '0';
@@ -1093,6 +1127,7 @@
 
             gameState = 'START';
             score = 0; frames = 0;
+            difficultyOffset = 0; // RESET
             pipeSpawnCount = 0; 
             currentBiome = 0; 
             
@@ -1120,7 +1155,9 @@
             wrapper.style.borderColor = "#fff";
             
             player.y = height/2; player.velocity = 0; player.rotation = 0;
-            player.shieldCount = 0; 
+            
+            // CHRISTMAS MODE: START WITH A FREE SHIELD
+            player.shieldCount = 1; 
             
             obstacles.list = []; trail = []; shockwaves = []; floatTexts = []; items = [];
             initWinter(); initParticles();
