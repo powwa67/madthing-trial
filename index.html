@@ -152,19 +152,26 @@
         #leaderboard-list::-webkit-scrollbar-track { background: #000; }
         #leaderboard-list::-webkit-scrollbar-thumb { background: #ff0000; border-radius: 3px; }
         
-        /* NEW CHEAT BUTTON STYLES */
+        /* NEW CHEAT BUTTON STYLES - SMALLER & MOVED */
         #cheat-btn {
-            background: linear-gradient(90deg, #4b0082, #800080);
-            border: 2px solid #ff00ff; color: #fff;
-            font-family: 'Russo One', sans-serif; font-size: 1rem; padding: 10px 20px;
-            margin-top: 10px; cursor: pointer; border-radius: 8px;
+            background: transparent;
+            border: 1px solid #555; color: #555;
+            font-family: 'Russo One', sans-serif; font-size: 0.7rem; padding: 5px 10px;
+            margin-top: 5px; cursor: pointer; border-radius: 4px;
             text-transform: uppercase; transition: all 0.2s; pointer-events: auto; 
-            box-shadow: 0 0 15px rgba(255, 0, 255, 0.4); 
-            width: 80%; max-width: 250px; display: inline-block;
+            display: inline-block;
         }
-        #cheat-btn:hover { background: #fff; color: #800080; }
+        #cheat-btn:hover { border-color: #ff00ff; color: #ff00ff; }
+        
+        /* Active State */
+        #cheat-btn.active-cheat {
+            background: #00ff00; color: #000; border-color: #fff;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        /* Exhausted State */
         #cheat-btn.exhausted {
-            background: #333; border-color: #555; color: #777;
+            background: #222; border-color: #444; color: #444;
             cursor: not-allowed; box-shadow: none;
         }
 
@@ -289,10 +296,11 @@
                     <span style="font-size:0.7rem; color:#fff;">CHECK BACK TOMORROW</span>
                 </div>
                 
-                <button id="cheat-btn" onclick="claimCheat(event)">SECRET CHEAT</button>
-
                 <div style="color:#d4af37; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #d4af37; animation:blink 0.5s infinite alternate;">TAP TO SLEIGH</div>
+                
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: FANCY</button>
+                <br>
+                <button id="cheat-btn" onclick="claimCheat(event)">CHEAT</button>
             </div>
         </div>
             
@@ -423,9 +431,7 @@
         if(savedCheatDate === todayStr) {
             isCheatActive = true;
             cheatBtn.innerText = "CHEAT ACTIVE!";
-            cheatBtn.style.background = "#00ff00";
-            cheatBtn.style.borderColor = "#fff";
-            cheatBtn.style.color = "#000";
+            cheatBtn.classList.add('active-cheat');
         }
         
         let PERF_MODE = false;
@@ -475,12 +481,19 @@
             return `week_${d.getUTCFullYear()}_${weekNo}`;
         }
 
-        // --- CHEAT FUNCTION ---
+        // --- CHEAT FUNCTION (UPDATED) ---
         async function claimCheat(e) {
             e.stopPropagation();
+            
+            // 1. Check if exhausted or active BEFORE prompt
+            if(cheatBtn.classList.contains('exhausted')) {
+                alert("CHEAT EXHAUSTED");
+                return;
+            }
             if(isCheatActive) return; // Already have it
 
-            const code = prompt("Finish the sentence: JJK is...");
+            // 2. Prompt
+            const code = prompt("ENTER SECRET CHEAT CODE:");
             if(!code) return;
 
             cheatBtn.innerText = "CHECKING...";
@@ -501,20 +514,22 @@
                     // SUCCESS
                     isCheatActive = true;
                     localStorage.setItem('powa-cheat-date', new Date().toDateString());
+                    
                     cheatBtn.innerText = "CHEAT ACTIVE!";
-                    cheatBtn.style.background = "#00ff00";
-                    cheatBtn.style.borderColor = "#fff";
-                    cheatBtn.style.color = "#000";
+                    cheatBtn.classList.add('active-cheat');
+                    
+                    // APPLY REWARD IMMEDIATELY
+                    resetLevel(); // Reruns resetLevel to apply +10 score immediately
+                    
                     alert("CHEAT ACTIVATED! +10 SCORE START!");
                 } else if (data.error === "FULL") {
                     // EXHAUSTED
                     cheatBtn.classList.add('exhausted');
-                    cheatBtn.innerText = "CHEAT EXHAUSTED";
-                    cheatBtn.onclick = null;
+                    cheatBtn.innerText = "EXHAUSTED";
                     alert("TOO LATE! 5 PLAYERS ALREADY CLAIMED IT.");
                 } else {
                     // WRONG CODE
-                    cheatBtn.innerText = "SECRET CHEAT";
+                    cheatBtn.innerText = "CHEAT";
                     alert("WRONG CODE!");
                 }
             } catch (error) {
