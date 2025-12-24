@@ -172,7 +172,7 @@
         /* Exhausted State */
         #cheat-btn.exhausted {
             background: #222; border-color: #444; color: #444;
-            cursor: not-allowed; box-shadow: none;
+            cursor: not-allowed; box-shadow: none; pointer-events: auto;
         }
 
         #perf-btn {
@@ -482,6 +482,28 @@
         }
 
         // --- CHEAT FUNCTION (UPDATED) ---
+        async function checkGlobalCheatStatus() {
+            if(isCheatActive) return; // Already have it, no need to check
+            
+            try {
+                const response = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: "CHECK_CHEAT_STATUS"
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.exhausted) {
+                    cheatBtn.classList.add('exhausted');
+                    cheatBtn.innerText = "EXHAUSTED";
+                }
+            } catch(e) {
+                console.log("Status check failed");
+            }
+        }
+
         async function claimCheat(e) {
             e.stopPropagation();
             
@@ -1583,6 +1605,9 @@
                 }
             });
         };
+
+        // --- NEW: Check cheat on load ---
+        checkGlobalCheatStatus();
 
         initWinter(); initParticles(); resetLevel(); requestAnimationFrame(loop);
         switchTab('daily');
