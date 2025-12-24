@@ -722,8 +722,8 @@
             shieldCount: 0, 
             
             update: function() {
-                // Risk vs Reward: Heavier with more shields
-                this.velocity += GRAVITY + (this.shieldCount * 0.05);
+                // REMOVED WEIGHT PENALTY. JUMP IS NOW CONSISTENT.
+                this.velocity += GRAVITY; 
                 
                 this.y += this.velocity;
                 
