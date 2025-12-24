@@ -122,7 +122,7 @@
         }
 
         #leaderboard {
-            margin: 15px auto; width: 320px; height: 210px;
+            margin: 15px auto; width: 320px; height: 160px; /* Shortened to fit cheat button */
             background: rgba(10, 0, 0, 0.9); border: 2px solid #00ff00; 
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.8);
             border-radius: 10px; padding: 10px; overflow: hidden;
@@ -152,10 +152,26 @@
         #leaderboard-list::-webkit-scrollbar-track { background: #000; }
         #leaderboard-list::-webkit-scrollbar-thumb { background: #ff0000; border-radius: 3px; }
         
+        /* NEW CHEAT BUTTON STYLES */
+        #cheat-btn {
+            background: linear-gradient(90deg, #4b0082, #800080);
+            border: 2px solid #ff00ff; color: #fff;
+            font-family: 'Russo One', sans-serif; font-size: 1rem; padding: 10px 20px;
+            margin-top: 10px; cursor: pointer; border-radius: 8px;
+            text-transform: uppercase; transition: all 0.2s; pointer-events: auto; 
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.4); 
+            width: 80%; max-width: 250px; display: inline-block;
+        }
+        #cheat-btn:hover { background: #fff; color: #800080; }
+        #cheat-btn.exhausted {
+            background: #333; border-color: #555; color: #777;
+            cursor: not-allowed; box-shadow: none;
+        }
+
         #perf-btn {
             background: rgba(0, 0, 0, 0.8); border: 2px solid #fff; color: #fff;
-            font-family: 'Russo One', sans-serif; font-size: 1rem; padding: 10px 20px;
-            margin-top: 25px; cursor: pointer; border-radius: 8px;
+            font-family: 'Russo One', sans-serif; font-size: 0.8rem; padding: 8px 15px;
+            margin-top: 15px; cursor: pointer; border-radius: 8px;
             text-transform: uppercase; transition: all 0.2s; pointer-events: auto; 
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); position: relative; z-index: 30; 
         }
@@ -272,6 +288,9 @@
                     ⚠ DAILY GIFT EXHAUSTED ⚠<br>
                     <span style="font-size:0.7rem; color:#fff;">CHECK BACK TOMORROW</span>
                 </div>
+                
+                <button id="cheat-btn" onclick="claimCheat(event)">SECRET CHEAT</button>
+
                 <div style="color:#d4af37; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #d4af37; animation:blink 0.5s infinite alternate;">TAP TO SLEIGH</div>
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: FANCY</button>
             </div>
@@ -348,6 +367,7 @@
         const flashOverlay = document.getElementById('flash-overlay');
         const warpOverlay = document.getElementById('warp-overlay');
         const perfBtn = document.getElementById('perf-btn');
+        const cheatBtn = document.getElementById('cheat-btn');
         
         const deathModal = document.getElementById('death-modal');
         const winModal = document.getElementById('win-modal');
@@ -395,6 +415,19 @@
         let JUMP = 8.5;
         let difficultyOffset = 0; 
         
+        // CHEAT STATE
+        let isCheatActive = false;
+        // Check if cheat already claimed today
+        const savedCheatDate = localStorage.getItem('powa-cheat-date');
+        const todayStr = new Date().toDateString();
+        if(savedCheatDate === todayStr) {
+            isCheatActive = true;
+            cheatBtn.innerText = "CHEAT ACTIVE!";
+            cheatBtn.style.background = "#00ff00";
+            cheatBtn.style.borderColor = "#fff";
+            cheatBtn.style.color = "#000";
+        }
+        
         let PERF_MODE = false;
 
         let gameStartTime = 0;
@@ -434,13 +467,60 @@
         let audioCtx = new AudioContext();
 
         // --- HELPERS ---
-        // WEEKLY ID HELPER (ISO-8601)
         function getWeekId() {
             const d = new Date();
             d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
             const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
             const weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
             return `week_${d.getUTCFullYear()}_${weekNo}`;
+        }
+
+        // --- CHEAT FUNCTION ---
+        async function claimCheat(e) {
+            e.stopPropagation();
+            if(isCheatActive) return; // Already have it
+
+            const code = prompt("Finish the sentence: JJK is...");
+            if(!code) return;
+
+            cheatBtn.innerText = "CHECKING...";
+            
+            try {
+                const response = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: "CLAIM_CHEAT",  
+                        cheatCode: code
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // SUCCESS
+                    isCheatActive = true;
+                    localStorage.setItem('powa-cheat-date', new Date().toDateString());
+                    cheatBtn.innerText = "CHEAT ACTIVE!";
+                    cheatBtn.style.background = "#00ff00";
+                    cheatBtn.style.borderColor = "#fff";
+                    cheatBtn.style.color = "#000";
+                    alert("CHEAT ACTIVATED! +10 SCORE START!");
+                } else if (data.error === "FULL") {
+                    // EXHAUSTED
+                    cheatBtn.classList.add('exhausted');
+                    cheatBtn.innerText = "CHEAT EXHAUSTED";
+                    cheatBtn.onclick = null;
+                    alert("TOO LATE! 5 PLAYERS ALREADY CLAIMED IT.");
+                } else {
+                    // WRONG CODE
+                    cheatBtn.innerText = "SECRET CHEAT";
+                    alert("WRONG CODE!");
+                }
+            } catch (error) {
+                console.error(error);
+                cheatBtn.innerText = "ERROR";
+            }
         }
 
         async function fetchServerKey() {
@@ -1126,8 +1206,19 @@
             setTimeout(() => { bgFail.style.display = 'none'; bgWin.style.display = 'none'; }, 500);
 
             gameState = 'START';
-            score = 0; frames = 0;
-            difficultyOffset = 0; // RESET
+            
+            // --- CHEAT LOGIC ---
+            // If cheat is active, start with 10 score.
+            // If cheat is active, set difficulty offset so speed is normal (7) instead of fast.
+            if(isCheatActive) {
+                score = 10;
+                difficultyOffset = 10; // Treat 10 as "0" for speed calc
+            } else {
+                score = 0;
+                difficultyOffset = 0; 
+            }
+            
+            frames = 0;
             pipeSpawnCount = 0; 
             currentBiome = 0; 
             
@@ -1144,7 +1235,7 @@
                 infiniteMode = true;
                 progressContainer.style.display = 'none';
                 scoreCounter.style.display = 'block'; 
-                scoreCounter.innerText = "0";
+                scoreCounter.innerText = score; // Display 10 if cheat active
             } else {
                 infiniteMode = false;
                 progressContainer.style.display = 'flex';
@@ -1339,6 +1430,7 @@
         function handleInput(e) {
             if(e.type === 'keydown' && e.code === 'Space') e.preventDefault();
             if(e.target.id === 'perf-btn') return;
+            if(e.target.id === 'cheat-btn') return; // Don't jump if clicking cheat
             if(e.target.closest('#leaderboard')) return;
             if(e.target.closest('.win-input-field')) return; 
 
