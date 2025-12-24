@@ -104,7 +104,7 @@
         }
 
         #main-menu {
-            position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
+            position: absolute; top: 53%; left: 50%; transform: translate(-50%, -50%);
             text-align: center; width: 100%; pointer-events: auto; z-index: 20;
         }
 
@@ -157,7 +157,7 @@
             background: transparent;
             border: 1px solid #555; color: #555;
             font-family: 'Russo One', sans-serif; font-size: 0.7rem; padding: 5px 10px;
-            margin-top: 5px; cursor: pointer; border-radius: 4px;
+            margin-top: 15px; cursor: pointer; border-radius: 4px;
             text-transform: uppercase; transition: all 0.2s; pointer-events: auto; 
             display: inline-block;
         }
@@ -301,7 +301,7 @@
                     <span style="font-size:0.7rem; color:#fff;">CHECK BACK TOMORROW</span>
                 </div>
                 
-                <div style="color:#d4af37; margin-top:10px; font-size:1.4rem; text-shadow: 0 0 10px #d4af37; animation:blink 0.5s infinite alternate;">TAP TO SLEIGH</div>
+                <div style="color:#d4af37; margin-top:50px; font-size:1.4rem; text-shadow: 0 0 10px #d4af37; animation:blink 0.5s infinite alternate;">TAP TO SLEIGH</div>
                 
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: FANCY</button>
                 <br>
@@ -525,7 +525,7 @@
             }
             if(isCheatActive) return; 
 
-            const code = prompt("ENTER SECRET CHEAT CODE:");
+            const code = prompt("testing:");
             if(!code) return;
 
             cheatBtn.innerText = "CHECKING...";
@@ -1629,3 +1629,4 @@
     </script>
 </body>
 </html>
+
