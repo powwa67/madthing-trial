@@ -163,16 +163,21 @@
         }
         #cheat-btn:hover { border-color: #ff00ff; color: #ff00ff; }
         
+        /* Loading/Disabled State */
+        #cheat-btn:disabled {
+            opacity: 0.5; cursor: wait; border-color:#333; color:#555;
+        }
+
         /* Active State */
         #cheat-btn.active-cheat {
             background: #00ff00; color: #000; border-color: #fff;
-            box-shadow: 0 0 10px #00ff00;
+            box-shadow: 0 0 10px #00ff00; opacity: 1; cursor: default;
         }
         
         /* Exhausted State */
         #cheat-btn.exhausted {
             background: #222; border-color: #444; color: #444;
-            cursor: not-allowed; box-shadow: none; pointer-events: auto;
+            cursor: not-allowed; box-shadow: none; pointer-events: auto; opacity: 1;
         }
 
         #perf-btn {
@@ -300,7 +305,7 @@
                 
                 <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: FANCY</button>
                 <br>
-                <button id="cheat-btn" onclick="claimCheat(event)">CHEAT</button>
+                <button id="cheat-btn" onclick="claimCheat(event)" disabled>CONNECTING...</button>
             </div>
         </div>
             
@@ -432,6 +437,7 @@
             isCheatActive = true;
             cheatBtn.innerText = "CHEAT ACTIVE!";
             cheatBtn.classList.add('active-cheat');
+            cheatBtn.disabled = false;
         }
         
         let PERF_MODE = false;
@@ -483,7 +489,7 @@
 
         // --- CHEAT FUNCTION (UPDATED) ---
         async function checkGlobalCheatStatus() {
-            if(isCheatActive) return; // Already have it, no need to check
+            if(isCheatActive) return; 
             
             try {
                 const response = await fetch(WORKER_URL, {
@@ -498,23 +504,27 @@
                 if (data.exhausted) {
                     cheatBtn.classList.add('exhausted');
                     cheatBtn.innerText = "EXHAUSTED";
+                    cheatBtn.disabled = false; // Enable interaction so they can see alert if clicked (or leave disabled)
+                } else {
+                    cheatBtn.innerText = "CHEAT";
+                    cheatBtn.disabled = false; // ENABLE BUTTON NOW
                 }
             } catch(e) {
                 console.log("Status check failed");
+                cheatBtn.innerText = "CHEAT"; // Fallback
+                cheatBtn.disabled = false;
             }
         }
 
         async function claimCheat(e) {
             e.stopPropagation();
             
-            // 1. Check if exhausted or active BEFORE prompt
             if(cheatBtn.classList.contains('exhausted')) {
                 alert("CHEAT EXHAUSTED");
                 return;
             }
-            if(isCheatActive) return; // Already have it
+            if(isCheatActive) return; 
 
-            // 2. Prompt
             const code = prompt("ENTER SECRET CHEAT CODE:");
             if(!code) return;
 
