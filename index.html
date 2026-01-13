@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>POWA-PROXY: MERRY XMAS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Russo+One&display=swap" rel="stylesheet">
+    <title>ASTRAL DRIFT - GOD MODE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Russo+One&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -12,7 +12,7 @@
     <style>
         body {
             margin: 0;
-            background-color: #051015;
+            background-color: #1a0b2e;
             font-family: 'Russo One', sans-serif;
             overflow: hidden;
             width: 100vw;
@@ -27,252 +27,207 @@
         #game-container-box {
             position: relative;
             background: #000;
-            box-shadow: 0 0 40px rgba(212, 175, 55, 0.4); /* GOLD GLOW FOR XMAS */
-            border: 4px solid #fff;
-            border-radius: 12px;
+            box-shadow: 0 0 50px rgba(255, 0, 255, 0.3), 0 0 20px rgba(0, 255, 255, 0.2); 
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
             overflow: hidden;
+        }
+
+        .scanlines {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px; pointer-events: none; z-index: 60; opacity: 0.6;
+        }
+        
+        .vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(20,0,40,0.6) 100%);
+            pointer-events: none; z-index: 61;
         }
 
         #debug-log {
             display: none; position: absolute; bottom: 10px; left: 10px; right: 10px;
-            color: #ff0000; font-family: monospace; font-size: 12px;
+            color: #ff00ff; font-family: monospace; font-size: 12px;
             pointer-events: none; z-index: 999; text-shadow: 1px 1px 0 #000;
         }
 
-        .snow-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 5;
-            background: radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(10,20,40,0.3) 100%);
-        }
-
-        .bg-gif {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; opacity: 0; transition: opacity 0.5s;
-            pointer-events: none; z-index: 5; display: none; 
-        }
-
         .shake-small { animation: shake-s 0.1s; }
-        .glitch-anim { animation: float-title 3s ease-in-out infinite; }
+        .glitch-anim { animation: glitch-skew 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite both; }
 
-        @keyframes shake-s { 0% { transform: translate(0,0); } 50% { transform: translate(0, 4px); } 100% { transform: translate(0,0); } }
-        @keyframes float-title {
-            0% { transform: translateY(0px) rotate(0deg); } 
-            50% { transform: translateY(-10px) rotate(2deg); }
-            100% { transform: translateY(0px) rotate(0deg); }
+        @keyframes shake-s { 0% { transform: translate(0,0); } 50% { transform: translate(2px, 2px); } 100% { transform: translate(0,0); } }
+        
+        @keyframes glitch-skew {
+            0% { transform: skew(0deg); } 20% { transform: skew(-2deg); }
+            40% { transform: skew(2deg); } 60% { transform: skew(0deg); }
+            80% { transform: skew(1deg); } 100% { transform: skew(0deg); }
         }
         
-        .time-frozen {
-            filter: sepia(100%) hue-rotate(180deg) saturate(200%);
-            transition: filter 0.5s ease-out;
-        }
+        .time-frozen { filter: invert(100%) hue-rotate(180deg); transition: filter 0.2s ease-out; }
 
         canvas { display: block; width: 100%; height: 100%; }
 
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; display: flex; flex-direction: column;
-            justify-content: space-between; z-index: 10;
+            justify-content: space-between; z-index: 70;
         }
 
-        #top-bar {
-            display: flex; align-items: center; padding: 20px; width: 100%; box-sizing: border-box;
-            justify-content: center;
-        }
-
+        #top-bar { display: flex; align-items: center; padding: 20px; width: 100%; box-sizing: border-box; justify-content: center; }
         #progress-container { flex-grow: 1; display: flex; flex-direction: column; }
-
-        #progress-bar {
-            height: 20px; background: rgba(0,0,0,0.6); border: 2px solid #d4af37;
-            border-radius: 10px; position: relative; overflow: hidden;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); transform: skew(-5deg);
-        }
-
-        #progress-fill {
-            width: 0%; height: 100%; 
-            background: repeating-linear-gradient(45deg, #d4af37, #d4af37 10px, #ffffff 10px, #ffffff 20px); /* GOLD STRIPES */
-            transition: width 0.1s linear; box-shadow: 0 0 10px #fff;
-        }
+        #progress-bar { height: 12px; background: rgba(0,0,0,0.8); border: 1px solid #00ffff; position: relative; overflow: hidden; transform: skew(-20deg); }
+        #progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #ff00ff, #00ffff); box-shadow: 0 0 10px #ff00ff; transition: width 0.1s linear; }
         
         #score-counter {
-            display: none; 
-            font-size: 3rem;
-            color: #fff;
-            text-shadow: 0 0 20px #ff0000, 4px 4px 0 #005500;
-            -webkit-text-stroke: 2px #000;
-            font-family: 'Mountains of Christmas', cursive;
-            font-weight: bold;
+            display: none; font-size: 4rem; color: #fff;
+            text-shadow: 2px 2px 0px #ff00ff, -2px -2px 0px #00ffff;
+            font-family: 'Syncopate', sans-serif; font-weight: bold; letter-spacing: -2px;
         }
 
         #main-menu {
-            position: absolute; top: 53%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center; width: 100%; pointer-events: auto; z-index: 20;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; width: 100%; pointer-events: auto; z-index: 80;
         }
 
         h1 {
-            color: #d4af37; /* GOLD TITLE */
-            font-size: 3.5rem; margin: 0; line-height: 0.95;
-            text-shadow: 3px 3px 0 #fff, 0 0 30px #ff0000;
-            font-family: 'Mountains of Christmas', cursive; 
-            letter-spacing: 2px;
+            color: #fff; font-size: 3rem; margin: 0; line-height: 0.9;
+            text-shadow: 3px 3px 0px #ff00ff, -3px -3px 0px #00ffff;
+            font-family: 'Syncopate', sans-serif; letter-spacing: 4px; text-transform: uppercase;
         }
         
-        .high-score-label {
-            color: #fff; font-size: 1.2rem; margin-top: 10px;
-            text-shadow: 0 0 10px #d4af37; letter-spacing: 1px;
+        .subtitle {
+            font-family: 'Russo One'; color: #00ffff; font-size: 1rem; 
+            letter-spacing: 4px; margin-bottom: 20px; text-shadow: 0 0 10px #00ffff;
         }
+
+        .high-score-label { color: #ff00ff; font-size: 1rem; margin-top: 10px; text-shadow: 0 0 5px #ff00ff; letter-spacing: 1px; }
 
         #leaderboard {
-            margin: 15px auto; width: 320px; height: 220px; /* Shortened to fit cheat button */
-            background: rgba(10, 0, 0, 0.9); border: 2px solid #00ff00; 
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.8);
-            border-radius: 10px; padding: 10px; overflow: hidden;
-            display: flex; flex-direction: column; pointer-events: auto;            
-            text-align: left; box-sizing: border-box; font-family: 'Russo One', sans-serif; 
+            margin: 15px auto; width: 320px; height: 200px; 
+            background: rgba(10, 0, 20, 0.85); border: 1px solid #ff00ff; 
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.1), inset 0 0 20px rgba(0, 0, 0, 0.8);
+            padding: 10px; overflow: hidden; display: flex; flex-direction: column; pointer-events: auto;            
+            text-align: left; box-sizing: border-box; font-family: 'Russo One', sans-serif; backdrop-filter: blur(4px);
         }
 
-        #tab-container {
-            display: flex; justify-content: center; margin-bottom: 8px; gap: 5px;
-        }
+        #tab-container { display: flex; justify-content: center; margin-bottom: 8px; gap: 0px; }
 
         .tab-btn {
-            background: transparent; border: 1px solid #005500; color: #008800;
-            padding: 5px 10px; font-family: 'Russo One'; font-size: 0.8rem;
-            cursor: pointer; flex-grow: 1; text-transform: uppercase;
+            background: transparent; border: 1px solid #555; color: #555;
+            padding: 5px 10px; font-family: 'Syncopate'; font-size: 0.7rem; font-weight: bold;
+            cursor: pointer; flex-grow: 1; text-transform: uppercase; transition: 0.2s;
         }
         .tab-btn.active {
-            background: #00ff00; color: #000; border: 1px solid #00ff00;
-            box-shadow: 0 0 10px #00ff00;
+            background: rgba(0, 255, 255, 0.1); color: #00ffff; border: 1px solid #00ffff;
+            box-shadow: 0 0 10px rgba(0,255,255,0.3);
         }
 
-        #leaderboard-list {
-            overflow-y: auto; -webkit-overflow-scrolling: touch; flex-grow: 1; text-align: left;
-        }
-
-        #leaderboard-list::-webkit-scrollbar { width: 6px; }
+        #leaderboard-list { overflow-y: auto; -webkit-overflow-scrolling: touch; flex-grow: 1; text-align: left; }
+        #leaderboard-list::-webkit-scrollbar { width: 4px; }
         #leaderboard-list::-webkit-scrollbar-track { background: #000; }
-        #leaderboard-list::-webkit-scrollbar-thumb { background: #ff0000; border-radius: 3px; }
+        #leaderboard-list::-webkit-scrollbar-thumb { background: #ff00ff; }
         
-        /* NEW CHEAT BUTTON STYLES - SMALLER & MOVED */
         #cheat-btn {
-            background: transparent;
-            border: 1px solid #555; color: #555;
-            font-family: 'Russo One', sans-serif; font-size: 0.7rem; padding: 5px 10px;
-            margin-top: 15px; cursor: pointer; border-radius: 4px;
-            text-transform: uppercase; transition: all 0.2s; pointer-events: auto; 
-            display: inline-block;
+            background: transparent; border: 1px solid #444; color: #666;
+            font-family: 'Syncopate', sans-serif; font-size: 0.6rem; padding: 8px 10px;
+            margin-top: 15px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; pointer-events: auto; 
+            display: inline-block; letter-spacing: 1px;
         }
-        #cheat-btn:hover { border-color: #ff00ff; color: #ff00ff; }
-        
-        /* Loading/Disabled State */
-        #cheat-btn:disabled {
-            opacity: 0.5; cursor: wait; border-color:#333; color:#555;
-        }
-
-        /* Active State */
-        #cheat-btn.active-cheat {
-            background: #00ff00; color: #000; border-color: #fff;
-            box-shadow: 0 0 10px #00ff00; opacity: 1; cursor: default;
-        }
-        
-        /* Exhausted State */
-        #cheat-btn.exhausted {
-            background: #222; border-color: #444; color: #444;
-            cursor: not-allowed; box-shadow: none; pointer-events: auto; opacity: 1;
-        }
+        #cheat-btn:hover { border-color: #00ffff; color: #00ffff; text-shadow: 0 0 5px #00ffff; }
+        #cheat-btn:disabled { opacity: 0.5; cursor: wait; border-color:#333; color:#444; }
+        #cheat-btn.active-cheat { background: #ff00ff; color: #000; border-color: #fff; box-shadow: 0 0 15px #ff00ff; opacity: 1; cursor: default; }
+        #cheat-btn.exhausted { background: #111; border-color: #333; color: #333; cursor: not-allowed; }
 
         #perf-btn {
-            background: rgba(0, 0, 0, 0.8); border: 2px solid #fff; color: #fff;
-            font-family: 'Russo One', sans-serif; font-size: 0.8rem; padding: 8px 15px;
-            margin-top: 15px; cursor: pointer; border-radius: 8px;
-            text-transform: uppercase; transition: all 0.2s; pointer-events: auto; 
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); position: relative; z-index: 30; 
+            background: rgba(0, 0, 0, 0.5); border: 1px solid #fff; color: #fff;
+            font-family: 'Syncopate', sans-serif; font-size: 0.6rem; padding: 8px 15px;
+            margin-top: 15px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; pointer-events: auto; 
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); position: relative; z-index: 30; 
         }
         #perf-btn:hover { background: #fff; color: #000; }
         
+        /* GOD MODE BUTTON */
+        #god-btn {
+            background: #ff0000; border: 2px solid #fff; color: #fff;
+            font-family: 'Syncopate', sans-serif; font-size: 0.8rem; padding: 10px 20px;
+            margin-top: 15px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; pointer-events: auto; 
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.6); position: relative; z-index: 30; display: block; margin-left: auto; margin-right: auto;
+        }
+        #god-btn:hover { background: #fff; color: #ff0000; }
+
         .modal {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 100; flex-direction: column;
+            background: rgba(0,0,0,0.8); z-index: 100; flex-direction: column;
             align-items: center; justify-content: center; padding: 20px;
             box-sizing: border-box; text-align: center; animation: fadeIn 0.3s;
-            pointer-events: auto; backdrop-filter: blur(5px);
+            pointer-events: auto; backdrop-filter: blur(8px);
         }
 
-        #win-modal { background: rgba(255,255,255,0.1); backdrop-filter: none; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(1.1); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .btn {
-            background: linear-gradient(180deg, #ff0000, #990000);
-            border: 2px solid #fff; border-radius: 8px; padding: 15px;
-            color: white; font-family: 'Russo One', sans-serif; font-size: 1.2rem;
+            background: transparent; border: 2px solid #ff00ff; color: #ff00ff;
+            border-radius: 0; padding: 15px; font-family: 'Syncopate', sans-serif; font-weight: bold; font-size: 1rem;
             margin: 10px 0; cursor: pointer; width: 100%; max-width: 300px;
-            box-shadow: 0 6px 0 #550000, 0 15px 20px rgba(0,0,0,0.5);
-            text-shadow: 1px 1px 0 #000; transition: transform 0.1s, filter 0.1s;
+            box-shadow: 0 0 10px rgba(255,0,255,0.2); text-transform: uppercase; transition: 0.2s;
             position: relative; overflow: hidden;
         }
-        .btn:hover { filter: brightness(1.2); }
-        .btn:active { transform: translateY(6px); box-shadow: 0 0 0 #550000; }
+        .btn:hover { background: #ff00ff; color: #000; box-shadow: 0 0 20px #ff00ff; }
+        .btn:active { transform: scale(0.98); }
         
-        .btn-copy {
-            background: linear-gradient(180deg, #00aaff, #0055aa);
-            box-shadow: 0 6px 0 #003366, 0 15px 20px rgba(0,0,0,0.5);
-        }
-        .btn-copy:active { box-shadow: 0 0 0 #003366; }
+        .btn-copy { border-color: #00ffff; color: #00ffff; box-shadow: 0 0 10px rgba(0,255,255,0.2); }
+        .btn-copy:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
 
-        .btn-continue {
-            background: linear-gradient(180deg, #00ff00, #008800);
-            box-shadow: 0 6px 0 #004400, 0 15px 20px rgba(0,0,0,0.5);
-            margin-top: 15px;
-        }
-        .btn-continue:active { box-shadow: 0 0 0 #004400; }
+        .btn-continue { border-color: #ffff00; color: #ffff00; box-shadow: 0 0 10px rgba(255,255,0,0.2); margin-top: 15px; }
+        .btn-continue:hover { background: #ffff00; color: #000; box-shadow: 0 0 20px #ffff00; }
 
         .key-container { margin: 20px 0; width: 100%; max-width: 350px; }
 
         .key-box {
-            background: #111; border: 2px dashed #00ff00; color: #fff;
+            background: #050510; border: 1px dashed #00ffff; color: #fff;
             padding: 15px; font-family: monospace; font-size: 1.1rem;
             user-select: text; word-break: break-all;
-            box-shadow: 0 0 30px rgba(0,255,0,0.1);
-            border-radius: 8px; margin-bottom: 10px; position: relative;
+            box-shadow: 0 0 20px rgba(0,255,255,0.1); margin-bottom: 10px; position: relative;
         }
 
-        .key-label { font-size: 0.8rem; color: #aaa; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
+        .key-label { font-size: 0.7rem; color: #aaa; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; font-family: 'Syncopate'; }
 
         .win-input-field {
-            background: #000; border: 2px solid #d4af37; color: #d4af37; 
+            background: rgba(0,0,0,0.5); border: 2px solid #ff00ff; color: #ff00ff; 
             padding: 15px; font-family: 'Russo One', sans-serif; font-size: 1.2rem; 
             text-align: center; text-transform: uppercase; margin: 15px 0; 
-            width: 80%; border-radius: 8px; outline: none;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+            width: 80%; outline: none; box-shadow: 0 0 15px rgba(255, 0, 255, 0.2);
         }
 
         #flash-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #fff; opacity: 0; pointer-events: none;
-            transition: opacity 0.1s; z-index: 50;
+            transition: opacity 0.1s; z-index: 50; mix-blend-mode: overlay;
         }
         
         #warp-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, rgba(255,255,255,0) 0%, rgba(200,255,255,0.8) 100%);
+            background: radial-gradient(circle, transparent 0%, rgba(255,0,255,0.4) 90%);
             opacity: 0; pointer-events: none; transition: opacity 0.2s;
-            z-index: 40; mix-blend-mode: overlay;
+            z-index: 40; mix-blend-mode: screen;
         }
     </style>
 </head>
 <body>
 
     <div id="game-container-box">
-        <div class="snow-overlay"></div>
+        <div class="scanlines"></div>
+        <div class="vignette"></div>
         <div id="debug-log"></div>
-        <img id="bg-fail" src="fail.gif" class="bg-gif">
-        <img id="bg-win" src="win.gif" class="bg-gif">
+        
+        <img id="bg-fail" src="" style="display:none">
+        <img id="bg-win" src="" style="display:none">
 
         <canvas id="gameCanvas"></canvas>
         <div id="flash-overlay"></div>
         <div id="warp-overlay"></div>
         
         <div id="ui-layer">
-            <div id="countdown" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:8rem; color:#d4af37; text-shadow:2px 2px 0 #fff, 0 0 40px #d4af37; z-index:100; font-family:'Mountains of Christmas'; pointer-events:none;">3</div>
+            <div id="countdown" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:8rem; color:#fff; text-shadow:4px 4px 0 #ff00ff; z-index:100; font-family:'Syncopate'; pointer-events:none;">3</div>
             <div id="top-bar">
                 <div id="progress-container">
                     <div id="progress-bar">
@@ -283,7 +238,8 @@
             </div>
 
             <div id="main-menu">
-                <h1 id="title" class="glitch-anim">MERRY<br>X-MAS</h1>
+                <h1 id="title" class="glitch-anim">ASTRAL<br>DRIFT</h1>
+                <div class="subtitle">VAPOR PROXY</div>
                 <div id="menu-high-score" class="high-score-label">BEST: 0</div>
                 
                 <div id="leaderboard">
@@ -292,69 +248,69 @@
                         <button class="tab-btn" onclick="switchTab('weekly')">WEEKLY</button>
                     </div>
                     <div id="leaderboard-list">
-                        <div style="text-align:center; color:#0f0; animation: blink 1s infinite; padding-top:20px;">CONNECTING TO NORTH POLE...</div>
+                        <div style="text-align:center; color:#00ffff; animation: blink 1s infinite; padding-top:20px; font-size: 0.8rem;">SYNCING TO VOID...</div>
                     </div>
                 </div>
 
-                <div id="key-warning" style="display:none; color:#ffcccc; font-size:1rem; margin-top:10px; border: 2px dashed #ff0000; background:rgba(40,0,0,0.8); padding:8px; animation: blink 2s infinite; font-family:'Russo One', sans-serif;">
-                    ⚠ DAILY GIFT EXHAUSTED ⚠<br>
-                    <span style="font-size:0.7rem; color:#fff;">CHECK BACK TOMORROW</span>
+                <div id="key-warning" style="display:none; color:#ffaaaa; font-size:0.8rem; margin-top:10px; border: 1px dashed #ff0000; background:rgba(40,0,0,0.8); padding:8px; animation: blink 2s infinite; font-family:'Russo One', sans-serif;">
+                    ⚠ DAILY KEY EXHAUSTED ⚠
                 </div>
                 
-                <div style="color:#d4af37; margin-top:50px; font-size:1.4rem; text-shadow: 0 0 10px #d4af37; animation:blink 0.5s infinite alternate;">TAP TO SLEIGH</div>
+                <div style="color:#fff; margin-top:20px; font-size:1.2rem; text-shadow: 0 0 10px #fff; animation:blink 0.5s infinite alternate; font-family: 'Syncopate';">TAP TO ASCEND</div>
                 
-                <button id="perf-btn" onclick="togglePerf(event)">GRAPHICS: FANCY</button>
-                <br>
+                <button id="perf-btn" onclick="togglePerf(event)">VISUALS: MAX</button>
                 <button id="cheat-btn" onclick="claimCheat(event)" disabled>CONNECTING...</button>
+                
+                <button id="god-btn" onclick="forceWin(event)">⚡ FORCE WIN (TEST) ⚡</button>
             </div>
         </div>
             
         <div id="death-modal" class="modal">
-            <h1 style="color: #ff0000; font-family: 'Mountains of Christmas'; margin: 0;">OH DEER!</h1>
+            <h1 style="color: #ff0000; font-family: 'Syncopate'; margin: 0; text-shadow: 2px 2px #500;">GLITCHED OUT</h1>
             
-            <div id="death-score-display" style="color:#fff; font-size:1.5rem; margin: 10px 0;">SCORE: 0</div>
-            <div id="death-best-display" style="color:#d4af37; font-size:1.2rem; text-shadow:0 0 10px #d4af37;">BEST: 0</div>
+            <div id="death-score-display" style="color:#fff; font-size:1.5rem; margin: 10px 0; font-family: 'Russo One';">SCORE: 0</div>
+            <div id="death-best-display" style="color:#ff00ff; font-size:1rem;">BEST: 0</div>
             
-            <input type="text" id="username-input" placeholder="ENTER NAME" maxlength="15" 
-                   style="background: #111; border: 2px solid #00ff00; color: #fff; padding: 10px; 
+            <input type="text" id="username-input" placeholder="ENTER ID" maxlength="15" 
+                   style="background: rgba(0,0,0,0.6); border: 2px solid #00ffff; color: #fff; padding: 10px; 
                           font-family: 'Russo One', sans-serif; font-size: 1.2rem; text-align: center; 
-                          text-transform: uppercase; margin: 15px 0; width: 80%; border-radius: 8px; outline: none;">
+                          text-transform: uppercase; margin: 15px 0; width: 80%; outline: none;">
             
             <button id="submit-score-btn" class="btn" onclick="submitScore()" 
-                    style="background: linear-gradient(180deg, #00aaff, #0055aa); border-color: #fff; margin-bottom: 15px; display: flex; justify-content: center; align-items: center;">
-                SUBMIT SCORE
+                    style="background: transparent; border-color: #00ffff; color: #00ffff; margin-bottom: 15px;">
+                UPLOAD SCORE
             </button>
 
-            <p id="death-msg" style="color:#aaa; font-size:0.9rem; margin-top:10px; max-width: 90%; line-height: 1.4; text-align: center;">
-                you made the naughty list instantly
+            <p id="death-msg" style="color:#aaa; font-size:0.8rem; margin-top:10px; max-width: 90%; line-height: 1.4; text-align: center; font-family: monospace;">
+                connection lost
             </p>
 
-            <div style="width: 200px; height: 4px; background: #333; margin: 20px 0;"></div>
+            <div style="width: 200px; height: 1px; background: #333; margin: 20px 0;"></div>
             
-            <button class="btn" style="background: linear-gradient(180deg, #555, #222); border-color:#888; display: flex; justify-content: center; align-items: center;" onclick="resetLevel()">
-                TRY AGAIN
+            <button class="btn" style="border-color:#555; color:#aaa;" onclick="resetLevel()">
+                REBOOT SYSTEM
             </button>
         </div>
 
         <div id="win-modal" class="modal">
             <div id="win-input-section" style="display:none; width: 100%; display: flex; flex-direction: column; align-items: center;">
-                <h1 style="color:#d4af37; font-size:2.5rem; text-shadow: 0 0 20px #d4af37; font-family:'Mountains of Christmas';">MERRY CHRISTMAS!</h1>
-                <p style="color:#fff; margin-bottom:15px;">ENTER NAME TO UNWRAP GIFT</p>
+                <h1 style="color:#00ffff; font-size:2rem; text-shadow: 0 0 20px #00ffff; font-family:'Syncopate';">ASCENSION</h1>
+                <p style="color:#fff; margin-bottom:15px; font-family: monospace;">REALITY BYPASSED</p>
                 
-                <input type="text" id="win-username-input" class="win-input-field" placeholder="YOUR NAME" maxlength="15">
+                <input type="text" id="win-username-input" class="win-input-field" placeholder="YOUR ID" maxlength="15">
                 
-                <button class="btn" onclick="submitWinDetails()" style="background: linear-gradient(180deg, #d4af37, #996515);">
-                    CLAIM GIFT
+                <button class="btn" onclick="submitWinDetails()" style="border-color: #ffff00; color: #ffff00;">
+                    CLAIM ACCESS
                 </button>
             </div>
 
             <div id="win-reward-section" style="display:none; width: 100%; flex-direction: column; align-items: center;">
-                <h1 style="color:#00ff00; font-size:3rem; text-shadow: 0 0 20px #00ff00;">NICE LIST!</h1>
+                <h1 style="color:#00ff00; font-size:2.5rem; text-shadow: 0 0 20px #00ff00; font-family:'Syncopate';">GRANTED</h1>
                 <div class="key-container">
-                    <div class="key-label">DAILY API GIFT</div>
+                    <div class="key-label">DAILY ACCESS KEY</div>
                     <div id="key-text" class="key-box">Loading...</div>
-                    <button class="btn btn-copy" onclick="copyKey('key-text', this)">COPY KEY</button>
-                    <button class="btn btn-continue" onclick="continueGame()">KEEP SLEIGHING</button>
+                    <button class="btn btn-copy" onclick="copyKey('key-text', this)">COPY DATA</button>
+                    <button class="btn btn-continue" onclick="continueGame()">ENTER THE VOID</button>
                 </div>
             </div>
         </div>
@@ -364,12 +320,9 @@
         function logError(msg) {
             console.error(msg);
             const el = document.getElementById('debug-log');
-            if(el) { el.style.display='block'; el.innerText = "ERROR: " + msg; }
+            if(el) { el.style.display='block'; el.innerText = "ERR: " + msg; }
         }
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            logError(msg);
-            return false;
-        };
+        window.onerror = function(msg, url, lineNo, columnNo, error) { logError(msg); return false; };
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -381,15 +334,13 @@
         const warpOverlay = document.getElementById('warp-overlay');
         const perfBtn = document.getElementById('perf-btn');
         const cheatBtn = document.getElementById('cheat-btn');
+        const godBtn = document.getElementById('god-btn');
         
         const deathModal = document.getElementById('death-modal');
         const winModal = document.getElementById('win-modal');
         const menuHighScore = document.getElementById('menu-high-score');
         const deathScoreDisplay = document.getElementById('death-score-display');
         const deathBestDisplay = document.getElementById('death-best-display');
-        
-        const bgFail = document.getElementById('bg-fail');
-        const bgWin = document.getElementById('bg-win');
 
         const LOGICAL_WIDTH = 540;
         const LOGICAL_HEIGHT = 960;
@@ -401,75 +352,59 @@
             let winH = window.innerHeight;
             let scale = Math.min(winW / LOGICAL_WIDTH, winH / LOGICAL_HEIGHT);
             if (scale > 1.2 && winW > 800) scale = Math.min(scale, 1.0);
-
             let finalW = Math.floor(LOGICAL_WIDTH * scale);
             let finalH = Math.floor(LOGICAL_HEIGHT * scale);
-            
-            wrapper.style.width = finalW + "px";
-            wrapper.style.height = finalH + "px";
-            canvas.width = LOGICAL_WIDTH;
-            canvas.height = LOGICAL_HEIGHT;
+            wrapper.style.width = finalW + "px"; wrapper.style.height = finalH + "px";
+            canvas.width = LOGICAL_WIDTH; canvas.height = LOGICAL_HEIGHT;
         }
         window.addEventListener('resize', resize);
         resize();
 
-        // --- GAME CONFIG (UPDATED) ---
-        const KEY_ID = "day_25"; 
-        const KEY_WARNING_MODE = "OFF"; 
+        // --- GAME CONFIG (GOD MODE VERSION) ---
+        const KEY_ID = "day_30"; 
         const WORKER_URL = "https://powa-vault.powwa.workers.dev"; 
 
         let TARGET_SCORE = 40; 
         
-        // Dynamic Difficulty Variables
         let BASE_SPEED = 7;
         let currentSpeed = 7;
-        let BASE_GAP = 170;
-        let GRAVITY = 0.6;
-        let JUMP = 8.5;
+        let BASE_GAP = 180; 
+        let GRAVITY = 0.55; 
+        let JUMP = 8.0;
         let difficultyOffset = 0; 
         
-        // CHEAT STATE
         let isCheatActive = false;
-        // Check if cheat already claimed today
         const savedCheatDate = localStorage.getItem('powa-cheat-date');
         const todayStr = new Date().toDateString();
         if(savedCheatDate === todayStr) {
             isCheatActive = true;
-            cheatBtn.innerText = "CHEAT ACTIVE!";
+            cheatBtn.innerText = "HACK ACTIVE";
             cheatBtn.classList.add('active-cheat');
             cheatBtn.disabled = false;
         }
         
         let PERF_MODE = false;
-
         let gameStartTime = 0;
 
-        // --- STORAGE ---
         let highScore = localStorage.getItem('powa-high-score') || 0;
         let storedKeyId = localStorage.getItem('powa-key-id');
         let storedUnlock = localStorage.getItem('powa-unlocked');
-        
         let isUnlocked = false;
 
-        if(storedKeyId === KEY_ID && storedUnlock === 'true') {
-            isUnlocked = true;
-        } else {
-            if(storedKeyId !== KEY_ID) {
-                localStorage.setItem('powa-key-id', KEY_ID);
-                localStorage.removeItem('powa-unlocked');
-            }
+        if(storedKeyId === KEY_ID && storedUnlock === 'true') { isUnlocked = true; } 
+        else {
+            if(storedKeyId !== KEY_ID) { localStorage.setItem('powa-key-id', KEY_ID); localStorage.removeItem('powa-unlocked'); }
             isUnlocked = false;
         }
         
         menuHighScore.innerText = `BEST: ${highScore}`;
 
-        // --- CHRISTMAS BIOMES ---
         const BIOMES = [
-            { bgTop: '#051015', bgBot: '#102030', grid: 'hsla(200, 50%, 50%, 0.1)', star: '#fff', nebula: 'rgba(255, 255, 255, 0.1)', border: '#00ffff' }, 
-            { bgTop: '#001505', bgBot: '#003010', grid: 'hsla(120, 100%, 30%, 0.2)', star: '#ffdddd', nebula: 'rgba(255, 0, 0, 0.1)', border: '#00ff00' }, 
-            { bgTop: '#200505', bgBot: '#400505', grid: 'hsla(0, 100%, 50%, 0.2)', star: '#d4af37', nebula: 'rgba(255, 215, 0, 0.15)', border: '#ff0000' }, 
-            { bgTop: '#100020', bgBot: '#200040', grid: 'hsla(280, 50%, 50%, 0.2)', star: '#ccffff', nebula: 'rgba(0, 255, 255, 0.2)', border: '#d4af37' }, 
-            { bgTop: '#000000', bgBot: '#111111', grid: 'rainbow', star: 'rainbow', nebula: 'rainbow', border: '#fff' }
+            { bgTop: '#0f0c29', bgBot: '#302b63', sun: '#ff00ff', grid: '#ff00ff', star: '#00ffff', border: '#ff00ff' }, 
+            { bgTop: '#2b1055', bgBot: '#7597de', sun: '#ffcc00', grid: '#ff00cc', star: '#ffffff', border: '#ffcc00' }, 
+            { bgTop: '#000000', bgBot: '#001100', sun: '#00ff00', grid: '#008800', star: '#00ff00', border: '#00ff00' }, 
+            { bgTop: '#ff9a9e', bgBot: '#fad0c4', sun: '#ffffff', grid: '#ffffff', star: '#fff', border: '#00ffff' }, 
+            { bgTop: '#000000', bgBot: '#111111', sun: 'rainbow', grid: 'rainbow', star: 'rainbow', border: '#fff' }
         ];
 
         let currentBiome = 0;
@@ -478,108 +413,50 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
 
-        // --- HELPERS ---
         function getWeekId() {
-            const d = new Date();
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+            const d = new Date(); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
             const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
             const weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
             return `week_${d.getUTCFullYear()}_${weekNo}`;
         }
 
-        // --- CHEAT FUNCTION (UPDATED) ---
         async function checkGlobalCheatStatus() {
             if(isCheatActive) return; 
-            
             try {
-                const response = await fetch(WORKER_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        action: "CHECK_CHEAT_STATUS"
-                    })
-                });
+                const response = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "CHECK_CHEAT_STATUS" }) });
                 const data = await response.json();
-                
-                if (data.exhausted) {
-                    cheatBtn.classList.add('exhausted');
-                    cheatBtn.innerText = "EXHAUSTED";
-                    cheatBtn.disabled = false; // Enable interaction so they can see alert if clicked (or leave disabled)
-                } else {
-                    cheatBtn.innerText = "CHEAT";
-                    cheatBtn.disabled = false; // ENABLE BUTTON NOW
-                }
-            } catch(e) {
-                console.log("Status check failed");
-                cheatBtn.innerText = "CHEAT"; // Fallback
-                cheatBtn.disabled = false;
-            }
+                if (data.exhausted) { cheatBtn.classList.add('exhausted'); cheatBtn.innerText = "EXHAUSTED"; cheatBtn.disabled = false; }
+                else { cheatBtn.innerText = "INIT HACK"; cheatBtn.disabled = false; }
+            } catch(e) { cheatBtn.innerText = "INIT HACK"; cheatBtn.disabled = false; }
         }
 
         async function claimCheat(e) {
             e.stopPropagation();
-            
-            if(cheatBtn.classList.contains('exhausted')) {
-                alert("CHEAT EXHAUSTED");
-                return;
-            }
+            if(cheatBtn.classList.contains('exhausted')) { alert("HACK EXHAUSTED"); return; }
             if(isCheatActive) return; 
-
-            const code = prompt("testing:");
+            const code = prompt("rueera:");
             if(!code) return;
-
-            cheatBtn.innerText = "CHECKING...";
-            
+            cheatBtn.innerText = "DECRYPTING...";
             try {
-                const response = await fetch(WORKER_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        action: "CLAIM_CHEAT",  
-                        cheatCode: code
-                    })
-                });
-
+                const response = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "CLAIM_CHEAT", cheatCode: code }) });
                 const data = await response.json();
-
                 if (response.ok && data.success) {
-                    // SUCCESS
-                    isCheatActive = true;
-                    localStorage.setItem('powa-cheat-date', new Date().toDateString());
-                    
-                    cheatBtn.innerText = "CHEAT ACTIVE!";
-                    cheatBtn.classList.add('active-cheat');
-                    
-                    // APPLY REWARD IMMEDIATELY
-                    resetLevel(); // Reruns resetLevel to apply +10 score immediately
-                    
-                    alert("CHEAT ACTIVATED! +10 SCORE START!");
+                    isCheatActive = true; localStorage.setItem('powa-cheat-date', new Date().toDateString());
+                    cheatBtn.innerText = "HACK ACTIVE"; cheatBtn.classList.add('active-cheat');
+                    resetLevel(); alert("SYSTEM BYPASSED. +10 SCORE START!");
                 } else if (data.error === "FULL") {
-                    // EXHAUSTED
-                    cheatBtn.classList.add('exhausted');
-                    cheatBtn.innerText = "EXHAUSTED";
-                    alert("TOO LATE! 5 PLAYERS ALREADY CLAIMED IT.");
-                } else {
-                    // WRONG CODE
-                    cheatBtn.innerText = "CHEAT";
-                    alert("WRONG CODE!");
-                }
-            } catch (error) {
-                console.error(error);
-                cheatBtn.innerText = "ERROR";
-            }
+                    cheatBtn.classList.add('exhausted'); cheatBtn.innerText = "EXHAUSTED"; alert("TOO LATE!");
+                } else { cheatBtn.innerText = "INIT HACK"; alert("ACCESS DENIED"); }
+            } catch (error) { cheatBtn.innerText = "ERROR"; }
         }
 
+        // --- REAL KEY FETCH ---
         async function fetchServerKey() {
             const keyTextBox = document.getElementById('key-text');
             if (gameStartTime === 0 || score === 0) {
-                 keyTextBox.innerText = "PLAY FIRST!";
-                 keyTextBox.style.color = "#ff4444";
-                 return;
+                 keyTextBox.innerText = "ACCESS DENIED"; keyTextBox.style.color = "#ff4444"; return;
             }
-            keyTextBox.innerText = "CONTACTING ELVES...";
-            keyTextBox.style.color = "#ffff00";
-            keyTextBox.style.animation = "blink 0.5s infinite";
+            keyTextBox.innerText = "DECRYPTING NODE..."; keyTextBox.style.color = "#ffff00"; keyTextBox.style.animation = "blink 0.5s infinite";
 
             try {
                 const response = await fetch(WORKER_URL, {
@@ -592,1042 +469,297 @@
                         startTime: gameStartTime
                     })
                 });
-
                 const data = await response.json();
-
                 if (response.ok && data.key) {
-                    keyTextBox.innerText = data.key;
-                    keyTextBox.style.color = "#00ff00"; 
-                    keyTextBox.style.animation = "none";
+                    keyTextBox.innerText = data.key; keyTextBox.style.color = "#00ff00"; keyTextBox.style.animation = "none";
                 } else {
-                    keyTextBox.innerText = data.error || "NAUGHTY LIST DETECTED";
-                    keyTextBox.style.color = "#ff0000";
+                    keyTextBox.innerText = data.error || "CONNECTION LOST"; keyTextBox.style.color = "#ff0000";
                 }
-            } catch (error) {
-                console.error(error);
-                keyTextBox.innerText = "SNOW STORM ERROR";
-                keyTextBox.style.color = "#ff0000";
-            }
+            } catch (error) { keyTextBox.innerText = "SERVER ERROR"; keyTextBox.style.color = "#ff0000"; }
         }
-
-        const BGM = new Audio('bgm_game.mp3'); 
-        BGM.loop = true;
-        BGM.volume = 0.5;
-        
-        // --- VARIABLES ---
-        let timeStopActive = false;
-        let timeStopTimer = 0;
-        
-        let orangeModeActive = false;
-        let orangeModeTimer = 0;
-        
-        let level1ShieldCount = 0;
-        let level1ClockCount = 0;
 
         function playTone(freq, type, duration, vol=0.1, delay=0) {
             try {
                 if(audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = type;
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
-                gain.gain.setValueAtTime(vol, audioCtx.currentTime + delay);
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+                gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
+                gain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + delay + 0.05);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
                 osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(audioCtx.currentTime + delay);
-                osc.stop(audioCtx.currentTime + delay + duration);
+                osc.start(audioCtx.currentTime + delay); osc.stop(audioCtx.currentTime + delay + duration);
             } catch(e) {}
         }
 
         const SFX = {
-            jump: () => {
-                playTone(1200, 'sine', 0.1, 0.05); 
-                playTone(1500, 'triangle', 0.1, 0.05, 0.02);
-                playTone(2000, 'sine', 0.1, 0.05, 0); 
-                playTone(2500, 'sine', 0.1, 0.03, 0.05);
-                playTone(3000, 'sine', 0.1, 0.02, 0.1);
-            },
-            score: () => playTone(880, 'sine', 0.2, 0.05),
-            shieldUp: () => { playTone(440, 'triangle', 0.2, 0.1); playTone(554, 'triangle', 0.2, 0.1, 0.1); playTone(659, 'triangle', 0.3, 0.1, 0.2); },
-            shieldBreak: () => { playTone(150, 'sawtooth', 0.3, 0.2); playTone(100, 'square', 0.3, 0.2, 0.05); },
-            timeStop: () => { playTone(1000, 'sine', 1.0, 0.1); playTone(2000, 'triangle', 0.5, 0.1, 0.1); },
-            panic: () => {
-                playTone(100, 'sawtooth', 1.0, 0.3); 
-                playTone(80, 'square', 1.0, 0.3, 0.1);
-            },
-            win: () => {
-                let notes = [659, 659, 659, 0, 659, 659, 659, 0, 659, 783, 523, 587, 659];
-                notes.forEach((n, i) => { if(n>0) playTone(n, 'triangle', 0.3, 0.1, i*0.25); });
-            },
-            explode: () => {
-                try {
-                    const bufferSize = audioCtx.sampleRate * 0.5;
-                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                    const data = buffer.getChannelData(0);
-                    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                    const noise = audioCtx.createBufferSource();
-                    noise.buffer = buffer;
-                    const gain = audioCtx.createGain();
-                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-                    noise.connect(gain); gain.connect(audioCtx.destination);
-                    noise.start();
-                } catch(e){}
-            },
-            warp: () => {
-                if(PERF_MODE) return;
-                playTone(300, 'sine', 0.5, 0.1);
-                playTone(600, 'sine', 0.5, 0.1, 0.1);
-            }
+            jump: () => { playTone(400, 'sawtooth', 0.2, 0.05); playTone(600, 'square', 0.2, 0.03, 0.05); },
+            score: () => { playTone(1200, 'sine', 0.3, 0.05); playTone(1800, 'sine', 0.3, 0.03, 0.1); },
+            shieldUp: () => { playTone(300, 'square', 0.3, 0.05); playTone(600, 'square', 0.3, 0.05, 0.1); },
+            shieldBreak: () => { playTone(100, 'sawtooth', 0.4, 0.1); },
+            timeStop: () => { playTone(2000, 'sine', 1.5, 0.1); },
+            panic: () => { playTone(80, 'sawtooth', 1.0, 0.2); },
+            win: () => { [440, 554, 659, 880].forEach((n, i) => playTone(n, 'triangle', 0.5, 0.1, i*0.2)); },
+            explode: () => { try { const buf = audioCtx.createBuffer(1, audioCtx.sampleRate*0.5, audioCtx.sampleRate); const d = buf.getChannelData(0); for(let i=0; i<d.length; i++) d[i] = Math.random()*2-1; const src = audioCtx.createBufferSource(); src.buffer = buf; const g = audioCtx.createGain(); g.gain.setValueAtTime(0.2, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime+0.5); src.connect(g); g.connect(audioCtx.destination); src.start(); } catch(e){} },
+            warp: () => { if(PERF_MODE) return; playTone(100, 'sawtooth', 0.6, 0.1); }
         };
 
-        const MUSIC = {
-            play: () => { BGM.play().catch(e => console.log("Audio start req")); },
-            stop: () => { BGM.pause(); BGM.currentTime = 0; },
-            pause: () => { BGM.pause(); },
-            resume: () => { BGM.play(); }
-        };
+        const MUSIC = { play: () => { if(audioCtx.state === 'suspended') audioCtx.resume(); }, stop: () => {}, resume: () => {} };
 
-        // --- STATE & ASSETS ---
         let frames = 0;
         let score = 0;
         let pipeSpawnCount = 0; 
         let gameState = 'START';
         let globalHue = 0; 
         let bgOffset = 0;  
-        
-        let particles = []; 
-        let trail = [];     
-        let shockwaves = [];
-        let floatTexts = []; 
-        let items = []; 
-        
-        let snowFlakes = []; 
-        let northernLights = []; 
+        let particles = [], trail = [], shockwaves = [], floatTexts = [], items = [], stars = [], gridLines = [];
+        const TIME_STEP = 1000 / 60; let lastTime = 0; let accumulator = 0;
 
-        const TIME_STEP = 1000 / 60;
-        let lastTime = 0;
-        let accumulator = 0;
-
-        // --- HELPERS 2 ---
         async function copyKey(elementId, btnElement) {
             const text = document.getElementById(elementId).innerText;
-            try {
-                await navigator.clipboard.writeText(text);
-                const originalText = btnElement.innerText;
-                btnElement.innerText = "COPIED!";
-                setTimeout(() => { btnElement.innerText = originalText; }, 2000);
-            } catch (err) {
-                btnElement.innerText = "FAIL";
-            }
+            try { await navigator.clipboard.writeText(text); btnElement.innerText = "DATA COPIED"; } catch (err) { btnElement.innerText = "FAIL"; }
         }
 
-        window.togglePerf = function(e) {
-            e.stopPropagation(); 
-            PERF_MODE = !PERF_MODE;
-            
-            if(PERF_MODE) {
-                perfBtn.innerText = "GRAPHICS: POTATO";
-                perfBtn.style.color = "#aaa";
-                snowFlakes = []; northernLights = []; particles = [];
-                ctx.fillStyle = "#000"; ctx.fillRect(0,0,width,height);
-            } else {
-                perfBtn.innerText = "GRAPHICS: FANCY";
-                perfBtn.style.color = "#fff";
-                initWinter();
-                initParticles();
-            }
-        };
-
-        function triggerShake() {
-            if(PERF_MODE) return;
-            wrapper.classList.remove('shake-small');
-            void wrapper.offsetWidth;
-            wrapper.classList.add('shake-small');
-        }
-
-        function flashScreen() {
-            if(PERF_MODE) return;
-            flashOverlay.style.opacity = 0.8;
-            setTimeout(() => { flashOverlay.style.opacity = 0; }, 50);
-        }
+        window.togglePerf = function(e) { e.stopPropagation(); PERF_MODE = !PERF_MODE; perfBtn.innerText = PERF_MODE ? "VISUALS: MIN" : "VISUALS: MAX"; if(!PERF_MODE) { initVoid(); initParticles(); } };
+        function triggerShake() { if(PERF_MODE) return; wrapper.classList.remove('shake-small'); void wrapper.offsetWidth; wrapper.classList.add('shake-small'); }
+        function flashScreen() { if(PERF_MODE) return; flashOverlay.style.opacity = 0.5; setTimeout(() => { flashOverlay.style.opacity = 0; }, 50); }
         
-        // --- ORANGE MODE LOGIC ---
-        function triggerOrangeMode() {
-            if(orangeModeActive) return;
-            orangeModeActive = true;
-            orangeModeTimer = 60 * 5; // 5 Seconds
-            SFX.panic();
-            if(!PERF_MODE) floatTexts.push({text: "PANIC! ALL ORANGE!", x: width/2, y: height/2, life: 3.0, vy: -1, color: '#ff0000', bg: '#fff'});
-        }
-        
-        function warpScreen() {
-            if(PERF_MODE) return;
-            warpOverlay.style.opacity = 1;
-            SFX.warp();
-            setTimeout(() => { warpOverlay.style.opacity = 0; }, 300);
-        }
+        let timeStopActive = false; let timeStopTimer = 0; let orangeModeActive = false; let orangeModeTimer = 0;
 
-        function updateProgress() {
-            let pct = Math.min(100, (score / TARGET_SCORE) * 100);
-            progressFill.style.width = pct + "%";
-        }
+        function triggerOrangeMode() { if(orangeModeActive) return; orangeModeActive = true; orangeModeTimer = 60 * 5; SFX.panic(); if(!PERF_MODE) floatTexts.push({text: "REALITY GLITCH!", x: width/2, y: height/2, life: 3.0, vy: -1, color: '#ff0000', bg: '#000'}); }
+        function warpScreen() { if(PERF_MODE) return; warpOverlay.style.opacity = 1; SFX.warp(); setTimeout(() => { warpOverlay.style.opacity = 0; }, 300); }
+        function updateProgress() { let pct = Math.min(100, (score / TARGET_SCORE) * 100); progressFill.style.width = pct + "%"; }
+        function switchBiome() { let index = Math.floor(score / 10); if(index >= BIOMES.length) index = BIOMES.length - 1; if(index !== currentBiome) { currentBiome = index; if(!PERF_MODE) warpScreen(); let color = BIOMES[currentBiome].border; wrapper.style.borderColor = color; wrapper.style.boxShadow = `0 0 40px ${color}40`; } }
 
-        function switchBiome() {
-            let index = Math.floor(score / 5);
-            if(index >= BIOMES.length) index = BIOMES.length - 1;
-            
-            if(index !== currentBiome) {
-                currentBiome = index;
-                if(!PERF_MODE) warpScreen();
-                let color = BIOMES[currentBiome].border;
-                wrapper.style.boxShadow = `0 0 60px ${color}4d`;
-                wrapper.style.borderColor = color;
-            }
-        }
+        function initVoid() { if(PERF_MODE) return; stars = []; for(let i=0; i<100; i++) stars.push({ x: Math.random()*width, y: Math.random()*height, size: Math.random()*2 + 0.5, speed: Math.random()*0.5 + 0.1 }); }
+        function updateVoid() { if(PERF_MODE) return; for(let s of stars) { s.y += s.speed; if(s.y > height) { s.y = -5; s.x = Math.random() * width; } } }
 
-        // --- WINTER BACKGROUND SYSTEM ---
-        function initWinter() {
-            if(PERF_MODE) return;
-            snowFlakes = []; northernLights = [];
-            // CHRISTMAS MODE: DOUBLE SNOW (300 instead of 150)
-            for(let i=0; i<300; i++) {
-                snowFlakes.push({
-                    x: Math.random()*width, 
-                    y: Math.random()*height, 
-                    size: Math.random()*3 + 1, 
-                    speed: Math.random()*1.5 + 0.5,
-                    sway: Math.random() * 0.5
-                });
-            }
-            for(let i=0; i<4; i++) northernLights.push({x:Math.random()*width, y:Math.random()*height*0.5, r:Math.random()*200+150, vx:(Math.random()-0.5)*0.1});
-        }
-
-        function updateWinter() {
-            if(PERF_MODE) return;
-            let snowTick = Date.now() * 0.002; 
-            for(let s of snowFlakes) { 
-                s.y += s.speed; 
-                s.x += Math.sin(snowTick + s.sway) * 0.5; 
-                if(s.y > height) { s.y = -10; s.x = Math.random() * width; }
-            }
-            for(let n of northernLights) { n.x+=n.vx; if(n.x<-200) n.x=width+200; if(n.x>width+200) n.x=-200; }
-        }
-
-        function drawWinter() {
+        function drawVoid() {
             const biome = BIOMES[currentBiome];
-            
-            if(PERF_MODE) {
-                ctx.fillStyle = biome.bgBot;
-                ctx.fillRect(0,0,width,height);
-                return;
-            }
-
-            let grad=ctx.createLinearGradient(0,0,0,height); 
-            grad.addColorStop(0, biome.bgTop); grad.addColorStop(1, biome.bgBot); 
-            ctx.fillStyle=grad; ctx.fillRect(0,0,width,height);
-
-            for(let n of northernLights) { 
-                ctx.save(); ctx.globalCompositeOperation="screen"; 
-                let rg=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r); 
-                let col = (biome.nebula === 'rainbow') ? `hsla(${globalHue}, 80%, 50%, 0.1)` : biome.nebula;
-                rg.addColorStop(0, col); rg.addColorStop(1,"rgba(0,0,0,0)"); 
-                ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2); ctx.fill(); ctx.restore(); 
-            }
-
-            ctx.fillStyle = "#fff";
-            for(let s of snowFlakes) { 
-                ctx.globalAlpha = 0.8; 
-                ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI*2); ctx.fill();
-            } 
-            ctx.globalAlpha=1;
+            if(PERF_MODE) { ctx.fillStyle = biome.bgBot; ctx.fillRect(0,0,width,height); return; }
+            let grad=ctx.createLinearGradient(0,0,0,height); grad.addColorStop(0, biome.bgTop); grad.addColorStop(1, biome.bgBot); ctx.fillStyle=grad; ctx.fillRect(0,0,width,height);
+            ctx.save(); ctx.shadowBlur = 40; ctx.shadowColor = biome.sun === 'rainbow' ? `hsl(${globalHue}, 100%, 50%)` : biome.sun;
+            ctx.fillStyle = biome.sun === 'rainbow' ? `hsl(${globalHue}, 100%, 50%)` : biome.sun;
+            let sunY = height * 0.7; if(biome.sun !== 'none') { ctx.beginPath(); ctx.arc(width/2, sunY, 120, 0, Math.PI*2); ctx.fill(); } ctx.restore();
+            ctx.save(); ctx.strokeStyle = biome.grid === 'rainbow' ? `hsla(${globalHue}, 100%, 50%, 0.4)` : biome.grid; ctx.lineWidth = 2; ctx.globalAlpha = 0.4;
+            let gridSpeed = (frames * 2) % 40; for(let i=0; i<height/2; i+=40) { let y = height/2 + i + gridSpeed; if (y > height) continue; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
+            let centerX = width/2; let vanishY = height * 0.3; for(let i=-600; i<width+600; i+=80) { ctx.beginPath(); ctx.moveTo(centerX, vanishY); ctx.lineTo(i + (bgOffset*2), height); ctx.stroke(); } ctx.restore();
+            ctx.fillStyle = "#fff"; for(let s of stars) { ctx.globalAlpha = Math.random()*0.5 + 0.5; ctx.fillRect(s.x, s.y, s.size, s.size); } ctx.globalAlpha=1;
         }
 
-        // --- GAME OBJECTS (UPDATED) ---
         const player = {
-            x: 60, y: 200, size: 36, velocity: 0, rotation: 0,
-            shieldCount: 0, 
-            
+            x: 60, y: 200, size: 30, velocity: 0, rotation: 0, shieldCount: 0, 
             update: function() {
-                // REMOVED WEIGHT PENALTY. JUMP IS NOW CONSISTENT.
-                this.velocity += GRAVITY; 
-                
-                this.y += this.velocity;
-                
-                if(frames % 4 === 0 && gameState === 'PLAY') {
-                    trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0});
-                    if(trail.length > 8) trail.shift();
-                }
-                if(gameState === 'PLAY') this.rotation += 2 + (currentSpeed * 0.3); 
+                this.velocity += GRAVITY; this.y += this.velocity;
+                if(frames % 3 === 0 && gameState === 'PLAY') { trail.push({x: this.x, y: this.y, rot: this.rotation, alpha: 1.0, color: `hsl(${globalHue}, 100%, 50%)`}); if(trail.length > 10) trail.shift(); }
+                if(gameState === 'PLAY') this.rotation += 4; 
             },
             draw: function() {
-                for(let t of trail) {
-                    let r = Math.max(0, this.size/2 * t.alpha);
-                    if(r > 0) {
-                        ctx.save(); ctx.translate(t.x+this.size/2, t.y+this.size/2); 
-                        ctx.fillStyle = `rgba(255, 215, 0, ${t.alpha*0.5})`; 
-                        ctx.beginPath(); ctx.arc(0,0, r, 0, Math.PI*2); ctx.fill();
-                        ctx.restore();
-                    }
-                }
-
-                ctx.save(); 
-                ctx.translate(this.x+this.size/2, this.y+this.size/2); 
-                ctx.rotate(this.rotation*Math.PI/180);
-
-                if(!PERF_MODE) { ctx.shadowBlur=15; ctx.shadowColor=`#d4af37`; }
-                
-                // CHRISTMAS MODE: GOLD PLAYER
-                ctx.fillStyle = "#d4af37"; 
-                ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
-                
-                ctx.fillStyle = "#ffcc00"; 
-                ctx.fillRect(-this.size/2, -4, this.size, 8); 
-                ctx.fillRect(-4, -this.size/2, 8, this.size); 
-                
-                ctx.lineWidth=2; ctx.strokeStyle="#fff"; 
-                ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
-                
-                // SANTA HAT
-                ctx.save();
-                ctx.rotate(-Math.PI/2); 
-                ctx.translate(0, -this.size/2 - 5);
-                ctx.fillStyle = "#cc0000";
-                ctx.beginPath();
-                ctx.moveTo(-15, 0); ctx.lineTo(15, 0); ctx.lineTo(0, -25);
-                ctx.fill();
-                ctx.fillStyle = "#fff";
-                ctx.beginPath(); ctx.arc(0, -25, 6, 0, Math.PI*2); ctx.fill();
-                ctx.fillRect(-16, 0, 32, 6); 
-                ctx.restore();
-
-                // SHIELD DRAWING
-                if(this.shieldCount > 0) {
-                    ctx.beginPath();
-                    ctx.lineWidth = 3;
-                    ctx.strokeStyle = `hsla(120, 100%, 70%, ${Math.abs(Math.sin(frames*0.1)) + 0.5})`;
-                    ctx.arc(0, 0, this.size * 0.8 + (this.shieldCount*2), 0, Math.PI*2);
-                    ctx.stroke();
-                }
-                
+                for(let t of trail) { ctx.save(); ctx.translate(t.x+this.size/2, t.y+this.size/2); ctx.rotate(t.rot*Math.PI/180); ctx.fillStyle = t.color; ctx.globalAlpha = t.alpha * 0.4; ctx.beginPath(); ctx.moveTo(0, -this.size/2); ctx.lineTo(this.size/2, this.size/2); ctx.lineTo(-this.size/2, this.size/2); ctx.fill(); ctx.restore(); }
+                ctx.globalAlpha = 1; ctx.save(); ctx.translate(this.x+this.size/2, this.y+this.size/2); ctx.rotate(this.rotation*Math.PI/180);
+                if(!PERF_MODE) { ctx.shadowBlur=20; ctx.shadowColor=`#00ffff`; }
+                ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(0, -this.size/2 - 5); ctx.lineTo(this.size/2 + 5, this.size/2 + 5); ctx.lineTo(-this.size/2 - 5, this.size/2 + 5); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(0, 5, 5, 0, Math.PI*2); ctx.fill();
+                if(this.shieldCount > 0) { ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = `rgba(0, 255, 255, ${Math.abs(Math.sin(frames*0.1)) + 0.5})`; ctx.arc(0, 0, this.size, 0, Math.PI*2); ctx.stroke(); }
                 ctx.restore(); ctx.shadowBlur=0;
-                
-                // DRAW SHIELD COUNT NUMBER
-                if(this.shieldCount > 0) {
-                    ctx.fillStyle = "#00ff00";
-                    ctx.font = "bold 16px monospace";
-                    ctx.fillText("x" + this.shieldCount, this.x + this.size/2, this.y - 20);
-                }
             }
         };
 
         const obstacles = {
             list: [],
             update: function() {
-                // --- SMART SPEED LOGIC ---
-                // 1. Calculate Score minus the starting offset (so infinite mode starts slow)
-                let effectiveScore = score - difficultyOffset;
-
-                // 2. Set Max Speed: 10 for normal game, 8 for infinite
-                let speedLimit = infiniteMode ? 8 : 10; 
-                
-                // 3. Apply the speed with the limit
-                currentSpeed = Math.min(speedLimit, BASE_SPEED + (effectiveScore * 0.06));
-                
-                // Gap decreases, but hard-capped at 120px to prevent "Impossible Squeeze"
-                let dynamicGap = Math.max(120, BASE_GAP - (score * 1.2));
-                
-                // Adjust spawn rate
+                let effectiveScore = score - difficultyOffset; let speedLimit = infiniteMode ? 9 : 11; currentSpeed = Math.min(speedLimit, BASE_SPEED + (effectiveScore * 0.08)); let dynamicGap = Math.max(130, BASE_GAP - (score * 1.5));
                 if(frames % Math.floor(55 * (7 / currentSpeed)) === 0) {
                     pipeSpawnCount++;
-                    let minH = 60; 
-                    let maxH = height - dynamicGap - minH;
+                    let minH = 60; let maxH = height - dynamicGap - minH;
                     let prevTop = (this.list.length > 0) ? this.list[this.list.length-1].top : (height - dynamicGap) / 2;
                     let direction = Math.random() < 0.5 ? 1 : -1;
                     if (prevTop < minH + 50) direction = 1; else if (prevTop > maxH - 50) direction = -1;
-                    
-                    // Reduce step size slightly to prevent "Staircase" patterns that are too steep
-                    let step = Math.floor(Math.random() * (180 - 60 + 1)) + 60;
-                    
-                    let topH = prevTop + (step * direction);
+                    let step = Math.floor(Math.random() * 120) + 50; let topH = prevTop + (step * direction);
                     if(topH < minH) topH = minH + 20; if(topH > maxH) topH = maxH - 20;
-                    
-                    // --- BALANCED CHAOS LOGIC ---
-                    // Capped to 0.6 (60%) so it doesn't become impossible in infinite mode.
-                    let anomalyChance = Math.min(0.6, 0.2 + (score * 0.012));
-                    let isAnomaly = Math.random() < anomalyChance;
-                    
-                    // CAP THE VERTICAL SPEED
-                    let baseAnomalySpeed = 1.5;
-                    if(score > 30) baseAnomalySpeed = 2.2;
-                    if(score > 50) baseAnomalySpeed = 3.2;
-                    
-                    let anomalySpeed = isAnomaly ? (baseAnomalySpeed * (Math.random()<0.5?1:-1)) : 0;
-                    let centerY = topH + (dynamicGap / 2);
-
-                    // --- Spawn Items Logic ---
+                    let isAnomaly = Math.random() < (0.2 + (score * 0.01)); let anomalySpeed = isAnomaly ? (1.5 * (Math.random()<0.5?1:-1)) : 0; let centerY = topH + (dynamicGap / 2);
                     let spawnType = null;
-                    if (!infiniteMode && level1ShieldCount < 2 && Math.random() < 0.1 && player.shieldCount === 0) {
-                        spawnType = 'SHIELD'; level1ShieldCount++;
-                    } else if (infiniteMode && pipeSpawnCount % 25 === 0 && player.shieldCount < 3) {
-                        spawnType = 'SHIELD';
-                    }
-                    if (!infiniteMode && score >= 30 && level1ClockCount < 2 && Math.random() < 0.15 && !timeStopActive) {
-                        spawnType = 'CLOCK'; level1ClockCount++;
-                    } else if (infiniteMode && pipeSpawnCount % 30 === 0 && !timeStopActive) {
-                        spawnType = 'CLOCK';
-                    }
-                    if (!spawnType && !timeStopActive && Math.random() < 0.15) {
-                        items.push({ x: width + 100, y: Math.random() * (height - 200) + 100, type: 'MYSTERY', taken: false });
-                    }
+                    if (Math.random() < 0.1 && player.shieldCount === 0) spawnType = 'SHIELD';
+                    else if (Math.random() < 0.1 && !timeStopActive) spawnType = 'CLOCK';
+                    else if (Math.random() < 0.1) items.push({ x: width + 100, y: Math.random() * (height - 200) + 100, type: 'MYSTERY', taken: false });
                     if (spawnType) items.push({ x: width + 20, y: topH + (dynamicGap / 2), type: spawnType, taken: false });
-                    
-                    this.list.push({
-                        x: width, w: 55, 
-                        top: topH, 
-                        bottom: height-dynamicGap-topH, 
-                        originalTop: topH, // MEMORY: Remember where we started
-                        passed: false, 
-                        isAnomaly: isAnomaly, 
-                        anomalySpeed: anomalySpeed, 
-                        centerY: centerY,
-                        breathSpeed: 0.03 + Math.random() * 0.05,
-                        breathPhase: Math.random() * Math.PI * 2,
-                        breathAmp: 30 + Math.random() * 40,
-                        isTrap: !isAnomaly && Math.random() < 0.3,
-                        hasBeenHit: false,
-                        gapSize: dynamicGap,
-                        moveRange: 80 // TETHER: Max pixels it can deviate from start
-                    });
+                    this.list.push({ x: width, w: 50, top: topH, bottom: height-dynamicGap-topH, originalTop: topH, passed: false, isAnomaly: isAnomaly, anomalySpeed: anomalySpeed, centerY: centerY, breathSpeed: 0.03 + Math.random() * 0.05, breathPhase: Math.random() * Math.PI * 2, gapSize: dynamicGap, moveRange: 80, hasBeenHit: false });
                 }
 
                 for(let p of this.list) {
                     p.x -= currentSpeed;
-                    
                     if (!timeStopActive) {
-                        // --- PHYSICS FIXES ---
-                        // 1. Orange Mode / Anomaly Handling
-                        if (orangeModeActive && p.anomalySpeed === 0) {
-                            p.anomalySpeed = (Math.random() < 0.5 ? 1 : -1) * 2.5; // Reduced panic speed slightly
-                        }
-                        if (!orangeModeActive && !p.isAnomaly && p.anomalySpeed !== 0) {
-                            p.anomalySpeed = 0;
-                        }
-
-                        if (p.isAnomaly || orangeModeActive) {
-                             p.top += p.anomalySpeed; 
-                             p.bottom -= p.anomalySpeed; 
-                             
-                             // 2. THE TETHER FIX
-                             let upperLimit = p.originalTop - p.moveRange;
-                             let lowerLimit = p.originalTop + p.moveRange;
-                             
-                             // Also respect screen bounds
-                             if(p.top < 40 || p.top > height - p.gapSize - 40 || p.top < upperLimit || p.top > lowerLimit) {
-                                 p.anomalySpeed *= -1;
-                             }
-                             
-                        } else {
-                            // Standard breathing logic
-                            let wave = Math.sin(frames * p.breathSpeed + p.breathPhase);
-                            let currentGap = p.gapSize + (wave * p.breathAmp * 0.5); 
-                            
-                            if (p.isTrap) {
-                                let distToPlayer = p.x - player.x;
-                                if (distToPlayer < 300 && distToPlayer > -50) {
-                                    let panicFactor = (300 - distToPlayer) * 0.35; 
-                                    currentGap -= panicFactor; 
-                                }
-                            }
-                            if (currentGap < 90) currentGap = 90; 
-                            
-                            p.top = p.centerY - (currentGap / 2);
-                            p.bottom = height - (p.centerY + (currentGap / 2));
-                        }
+                        if (orangeModeActive && p.anomalySpeed === 0) p.anomalySpeed = (Math.random() < 0.5 ? 1 : -1) * 2;
+                        if (p.isAnomaly || orangeModeActive) { p.top += p.anomalySpeed; p.bottom -= p.anomalySpeed; let upper = p.originalTop - p.moveRange; let lower = p.originalTop + p.moveRange; if(p.top < 40 || p.top > height - p.gapSize - 40 || p.top < upper || p.top > lower) p.anomalySpeed *= -1; } 
+                        else { let wave = Math.sin(frames * p.breathSpeed + p.breathPhase); let currentGap = p.gapSize + (wave * 20); p.top = p.centerY - (currentGap / 2); p.bottom = height - (p.centerY + (currentGap / 2)); }
                     }
 
-                    // --- NEW FORGIVING COLLISION LOGIC ---
                     if (!p.hasBeenHit) {
-                        // 1. Define the Player's Circular Hitbox
-                        // We shrink the radius by 6px to create the "Forgiveness"
-                        // The player is 36px wide. The hit radius becomes 12px.
-                        // This allows the visual corners of the box to clip through pipes safely.
-                        let hitRadius = (player.size / 2) - 6; 
-                        let playerCx = player.x + (player.size / 2);
-                        let playerCy = player.y + (player.size / 2);
-
-                        // 2. Helper Function: Circle vs Rectangle Collision
-                        // Checks if the circle is touching the Top Pipe or Bottom Pipe
-                        const checkHit = (rectX, rectY, rectW, rectH) => {
-                            // Find the point on the rectangle closest to the circle center
-                            let closestX = Math.max(rectX, Math.min(playerCx, rectX + rectW));
-                            let closestY = Math.max(rectY, Math.min(playerCy, rectY + rectH));
-
-                            // Calculate the distance between the circle center and that closest point
-                            let distanceX = playerCx - closestX;
-                            let distanceY = playerCy - closestY;
-
-                            // If distance is less than radius, we have a hit
-                            return (distanceX * distanceX + distanceY * distanceY) < (hitRadius * hitRadius);
-                        };
-
-                        // 3. Perform the checks
-                        let hitTop = checkHit(p.x, 0, p.w, p.top);
-                        let hitBot = checkHit(p.x, height - p.bottom, p.w, p.bottom);
-
-                        if (hitTop || hitBot) {
-                            if (player.shieldCount > 0) {
-                                player.shieldCount--; 
-                                p.hasBeenHit = true; 
-                                SFX.shieldBreak(); 
-                                triggerShake();
-                                if(!PERF_MODE) {
-                                    floatTexts.push({text: "SHIELD DOWN!", x: player.x, y: player.y-40, life: 1.5, vy: -1});
-                                    for(let i=0; i<10; i++) particles.push({type: 'explode', x: player.x, y: player.y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, life: 0.8, color: '#fff', size: 4});
-                                }
-                            } else {
-                                die();
-                            }
+                        let hitRadius = (player.size / 2) - 4; let playerCx = player.x + (player.size / 2); let playerCy = player.y + (player.size / 2);
+                        const checkHit = (rectX, rectY, rectW, rectH) => { let closestX = Math.max(rectX, Math.min(playerCx, rectX + rectW)); let closestY = Math.max(rectY, Math.min(playerCy, rectY + rectH)); let dx = playerCx - closestX; let dy = playerCy - closestY; return (dx * dx + dy * dy) < (hitRadius * hitRadius); };
+                        
+                        // GOD MODE: NO DYING ON PIPES
+                        if (checkHit(p.x, 0, p.w, p.top) || checkHit(p.x, height - p.bottom, p.w, p.bottom)) {
+                            // Normally die() or shield break here. Commented out for God Mode.
+                            if(!PERF_MODE) floatTexts.push({text: "GOD MODE", x: player.x, y: player.y-40, life: 0.5, vy: -3, color: '#ffff00'});
                         }
                     }
 
                     if(p.x + p.w < player.x && !p.passed) {
-                        score++; p.passed = true; SFX.score(); triggerShake();
+                        score++; p.passed = true; SFX.score();
                         if (infiniteMode) scoreCounter.innerText = score; else updateProgress();
                         switchBiome();
-                        if(!PERF_MODE && p.isAnomaly) floatTexts.push({text: "MAGIC!", x: player.x, y: player.y-40, life: 1.2, vy: -3});
-                        if(!PERF_MODE && p.isTrap) floatTexts.push({text: "CLOSE ONE!", x: player.x, y: player.y-40, life: 1.2, vy: -3});
                         if(!infiniteMode && score >= TARGET_SCORE) winGame();
                     }
                 }
                 if(this.list.length > 0 && this.list[0].x < -100) this.list.shift();
             },
-            
             draw: function() {
-                let era = Math.floor(score / 10) % 2; 
                 for(let p of this.list) {
-                    let activeColor = "#fff";
-                    if (p.isAnomaly) activeColor = "#00ff00"; 
-                    if (p.isTrap) activeColor = "#ffaa00"; 
-                    if (p.hasBeenHit) activeColor = "#555";
-                    if (orangeModeActive && !p.hasBeenHit) activeColor = "#ffaa00";
-
-                    if (era === 0) {
-                        ctx.save(); ctx.fillStyle = "#fff"; 
-                        ctx.fillRect(p.x, 0, p.w, p.top); ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
-                        if (!PERF_MODE) {
-                            ctx.save(); ctx.beginPath(); ctx.rect(p.x, 0, p.w, p.top); ctx.rect(p.x, height - p.bottom, p.w, p.bottom); ctx.clip();
-                            ctx.strokeStyle = (activeColor === "#fff") ? "#ff0000" : activeColor; ctx.lineWidth = 15; ctx.beginPath();
-                            for (let i = -50; i < height + 50; i += 40) { ctx.moveTo(p.x - 20, i); ctx.lineTo(p.x + p.w + 20, i + 40); }
-                            ctx.stroke(); ctx.restore();
-                        }
-                        ctx.lineWidth = 3; ctx.strokeStyle = activeColor;
-                        ctx.strokeRect(p.x, -2, p.w, p.top+2); ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2); ctx.restore();
-                    } else {
-                        ctx.fillStyle = "#883333"; ctx.fillRect(p.x, 0, p.w, p.top); ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
-                        if(!PERF_MODE) {
-                            ctx.save(); ctx.beginPath(); ctx.rect(p.x, 0, p.w, p.top); ctx.rect(p.x, height - p.bottom, p.w, p.bottom); ctx.clip();
-                            ctx.fillStyle = "#662222";
-                            for(let y=0; y<height; y+=30) { ctx.fillRect(p.x, y, p.w, 2); if ((y/30)%2 === 0) ctx.fillRect(p.x + 20, y, 2, 30); }
-                            ctx.restore();
-                            ctx.fillStyle="#fff"; ctx.fillRect(p.x - 5, p.top - 10, p.w + 10, 10); ctx.fillRect(p.x - 5, height - p.bottom, p.w + 10, 10);
-                        }
-                        if (p.isTrap || p.isAnomaly || orangeModeActive) {
-                             ctx.lineWidth = 3; ctx.strokeStyle = activeColor;
-                             ctx.strokeRect(p.x, -2, p.w, p.top+2); ctx.strokeRect(p.x, height-p.bottom, p.w, p.bottom+2);
-                        }
-                    }
+                    let colColor = p.isAnomaly ? "#ff00ff" : (orangeModeActive ? "#ff0000" : "#d8d8ff"); if(p.hasBeenHit) colColor = "#555";
+                    ctx.fillStyle = colColor; ctx.fillRect(p.x, 0, p.w, p.top); ctx.fillRect(p.x, height - p.bottom, p.w, p.bottom);
+                    if(!PERF_MODE) { ctx.fillStyle = "rgba(0,0,0,0.3)"; for(let i=10; i<p.w; i+=10) { ctx.fillRect(p.x + i, 0, 2, p.top); ctx.fillRect(p.x + i, height - p.bottom, 2, p.bottom); } ctx.fillStyle = "#fff"; ctx.fillRect(p.x - 5, p.top - 20, p.w + 10, 20); ctx.fillRect(p.x - 5, height - p.bottom, p.w + 10, 20); }
                 }
             }
         };
     
-        // --- CORE FUNCTIONS ---
         function die() {
-            if(score > highScore) {
-                highScore = score;
-                localStorage.setItem('powa-high-score', highScore);
-                menuHighScore.innerText = `BEST: ${highScore}`;
-            }
+            // GOD MODE: DISABLED DEATH
+            return; 
+        }
 
-            flashScreen(); SFX.explode();
-            gameState = 'DIE_ANIM';
-            deathScoreDisplay.innerText = `SCORE: ${score}`;
-            deathBestDisplay.innerText = `BEST: ${highScore}`;
-
-            const msgElement = document.getElementById('death-msg');
-            
-            if (score > 500) msgElement.innerText = "SANTA IS AFRAID OF YOUR POWER."; 
-            else if (score > 250) msgElement.innerText = "ABSOLUTELY SLEIGHED IT."; 
-            else if (score > 100) msgElement.innerText = "Not bad, reindeer games."; 
-            else if (score > 50) msgElement.innerText = "You tried... have a cookie."; 
-            else msgElement.innerText = "LITERALLY A LUMP OF COAL.";
-
-            bgFail.style.display = 'block';
-            setTimeout(() => { bgFail.style.opacity = '1'; }, 10);
-            setTimeout(() => { deathModal.style.display = 'flex'; }, 800);
-
-            const savedName = localStorage.getItem('powa-username');
-            if (savedName) {
-                document.getElementById('username-input').value = savedName;
-                submitScore(true); 
-            } else {
-                document.getElementById('submit-score-btn').disabled = false;
-                document.getElementById('submit-score-btn').innerText = "SUBMIT SCORE";
-            }
+        // --- FORCE WIN FUNCTION ---
+        window.forceWin = function(e) {
+            if(e) e.stopPropagation();
+            score = TARGET_SCORE; // Set score to winning amount
+            // HACK: Set start time to 1 minute ago so server accepts it
+            gameStartTime = Date.now() - 60000; 
+            winGame();
         }
 
         function winGame() {
-            gameState = 'WIN_PAUSE'; 
-            localStorage.setItem('powa-unlocked', 'true');
-            isUnlocked = true;
-
-            MUSIC.pause();
-            SFX.win();
-            flashScreen();
-            
-            bgWin.style.display = 'block';
-            setTimeout(() => { bgWin.style.opacity = '1'; }, 10);
+            gameState = 'WIN_PAUSE'; localStorage.setItem('powa-unlocked', 'true'); isUnlocked = true;
+            SFX.win(); flashScreen();
             winModal.style.display = 'flex';
-            
             const savedName = localStorage.getItem('powa-username');
             const winInput = document.getElementById('win-input-section');
             const winReward = document.getElementById('win-reward-section');
-
-            if (savedName) {
-                winInput.style.display = 'none';
-                winReward.style.display = 'flex';
-                submitScore(true);
-                fetchServerKey();
-            } else {
-                winInput.style.display = 'flex';
-                winReward.style.display = 'none';
-            }
+            if (savedName) { winInput.style.display = 'none'; winReward.style.display = 'flex'; submitScore(true); fetchServerKey(); }
+            else { winInput.style.display = 'flex'; winReward.style.display = 'none'; }
         }
         
         window.submitWinDetails = function() {
             const nameInput = document.getElementById('win-username-input');
-            const rawName = nameInput.value.trim();
-            if(!rawName) { nameInput.style.borderColor = "#ff0000"; return; }
+            const rawName = nameInput.value.trim(); if(!rawName) return;
             localStorage.setItem('powa-username', rawName);
-            document.getElementById('win-input-section').style.display = 'none';
-            document.getElementById('win-reward-section').style.display = 'flex';
-            submitScore(true);
-            fetchServerKey();
+            document.getElementById('win-input-section').style.display = 'none'; document.getElementById('win-reward-section').style.display = 'flex';
+            submitScore(true); fetchServerKey();
         };
 
         window.continueGame = function() {
-            infiniteMode = true;
-            isUnlocked = true; 
-            difficultyOffset = score; // RESET DIFFICULTY CURVE
-            localStorage.setItem('powa-unlocked', 'true');
-            winModal.style.display = 'none';
-            bgWin.style.opacity = '0';
-            setTimeout(() => { bgWin.style.display = 'none'; }, 500);
-            progressContainer.style.display = 'none';
-            scoreCounter.style.display = 'block';
-            scoreCounter.innerText = score;
-            gameStartTime = Date.now();
-            let count = 3;
-            const countEl = document.getElementById('countdown');
-            countEl.style.display = 'block';
-            countEl.innerText = count;
-            if(audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
-            
-            let timer = setInterval(() => {
-                count--;
-                if(count > 0) countEl.innerText = count;
-                else {
-                    clearInterval(timer);
-                    countEl.style.display = 'none';
-                    player.velocity = -JUMP; 
-                    gameState = 'PLAY';
-                    MUSIC.resume();
-                }
-            }, 1000);
+            infiniteMode = true; isUnlocked = true; difficultyOffset = score; localStorage.setItem('powa-unlocked', 'true');
+            winModal.style.display = 'none'; progressContainer.style.display = 'none'; scoreCounter.style.display = 'block'; scoreCounter.innerText = score;
+            gameStartTime = Date.now(); let count = 3; const countEl = document.getElementById('countdown'); countEl.style.display = 'block'; countEl.innerText = count;
+            let timer = setInterval(() => { count--; if(count > 0) countEl.innerText = count; else { clearInterval(timer); countEl.style.display = 'none'; player.velocity = -JUMP; gameState = 'PLAY'; } }, 1000);
         };
 
         window.resetLevel = function() {
-            deathModal.style.display = 'none';
-            bgFail.style.opacity = '0';
-            bgWin.style.opacity = '0';
-            setTimeout(() => { bgFail.style.display = 'none'; bgWin.style.display = 'none'; }, 500);
-
-            gameState = 'START';
-            
-            // --- CHEAT LOGIC ---
-            // If cheat is active, start with 10 score.
-            // If cheat is active, set difficulty offset so speed is normal (7) instead of fast.
-            if(isCheatActive) {
-                score = 10;
-                difficultyOffset = 10; // Treat 10 as "0" for speed calc
-            } else {
-                score = 0;
-                difficultyOffset = 0; 
-            }
-            
-            frames = 0;
-            pipeSpawnCount = 0; 
-            currentBiome = 0; 
-            
-            // RESET DYNAMIC DIFFICULTY VARIABLES
-            currentSpeed = BASE_SPEED;
-            
-            timeStopActive = false;
-            orangeModeActive = false;
-            canvas.classList.remove('time-frozen');
-            level1ShieldCount = 0;
-            level1ClockCount = 0;
-            
-            if (isUnlocked) {
-                infiniteMode = true;
-                progressContainer.style.display = 'none';
-                scoreCounter.style.display = 'block'; 
-                scoreCounter.innerText = score; // Display 10 if cheat active
-            } else {
-                infiniteMode = false;
-                progressContainer.style.display = 'flex';
-                scoreCounter.style.display = 'none';
-                updateProgress();
-            }
-
-            wrapper.style.borderColor = "#fff";
-            
-            player.y = height/2; player.velocity = 0; player.rotation = 0;
-            
-            // CHRISTMAS MODE: START WITH A FREE SHIELD
-            player.shieldCount = 1; 
-            
+            deathModal.style.display = 'none'; winModal.style.display = 'none'; gameState = 'START';
+            if(isCheatActive) { score = 10; difficultyOffset = 10; } else { score = 0; difficultyOffset = 0; }
+            frames = 0; currentSpeed = BASE_SPEED; currentBiome = 0; timeStopActive = false; orangeModeActive = false; canvas.classList.remove('time-frozen');
+            if (isUnlocked) { infiniteMode = true; progressContainer.style.display = 'none'; scoreCounter.style.display = 'block'; scoreCounter.innerText = score; } else { infiniteMode = false; progressContainer.style.display = 'flex'; scoreCounter.style.display = 'none'; updateProgress(); }
+            wrapper.style.borderColor = "#ff00ff"; player.y = height/2; player.velocity = 0; player.rotation = 0; player.shieldCount = isCheatActive ? 1 : 0;
             obstacles.list = []; trail = []; shockwaves = []; floatTexts = []; items = [];
-            initWinter(); initParticles();
-            document.getElementById('main-menu').style.display = 'block';
-            drawWinter(); player.draw();
-            MUSIC.stop();
+            initVoid(); initParticles(); document.getElementById('main-menu').style.display = 'block'; drawVoid(); player.draw();
         };
 
         function startGame() {
             if(gameState === 'PLAY') return;
-            try {
-                 if(audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
-            } catch(e){}
-            
+            try { if(audioCtx.state === 'suspended') audioCtx.resume(); } catch(e){}
             gameStartTime = Date.now();
             if(infiniteMode) scoreCounter.style.display = 'block';
-            gameState = 'PLAY';
-            MUSIC.play();
-            document.getElementById('main-menu').style.display = 'none';
-            player.velocity = -JUMP;
+            gameState = 'PLAY'; document.getElementById('main-menu').style.display = 'none'; player.velocity = -JUMP;
         }
 
         function updatePhysics() {
-            if (!timeStopActive) {
-                bgOffset -= currentSpeed * 0.5; if(bgOffset < -100) bgOffset = 0;
-                globalHue = (globalHue + 1) % 360;
-                updateWinter(); 
-            }
-
+            if (!timeStopActive) { bgOffset -= currentSpeed * 0.1; globalHue = (globalHue + 0.5) % 360; updateVoid(); }
             if(gameState !== 'PLAY' && gameState !== 'DIE_ANIM') return;
-            
-            if (timeStopActive) {
-                timeStopTimer--;
-                if (timeStopTimer <= 0) {
-                    timeStopActive = false;
-                    canvas.classList.remove('time-frozen'); 
-                    SFX.shieldUp();
-                }
-            }
-            
-            if(orangeModeActive) {
-                orangeModeTimer--;
-                if(orangeModeTimer <= 0) {
-                    orangeModeActive = false;
-                }
-            }
-
+            if (timeStopActive) { timeStopTimer--; if (timeStopTimer <= 0) { timeStopActive = false; canvas.classList.remove('time-frozen'); } }
+            if(orangeModeActive) { orangeModeTimer--; if (orangeModeTimer <= 0) orangeModeActive = false; }
             frames++;
-
-            if (!timeStopActive) {
-                particles = particles.filter(p => { if(p.type==='dust') { p.x -= p.speed; if(p.x<0) p.x=width; return true; } p.x += p.vx; p.y += p.vy; p.life -= 0.03; return p.life > 0; });
-            }
-            
-            shockwaves = shockwaves.filter(s => { s.r+=10; s.alpha-=0.05; return s.alpha>0; });
+            if (!timeStopActive) { particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.03; return p.life > 0; }); }
             floatTexts = floatTexts.filter(f => { f.y+=f.vy; f.life-=0.02; return f.life>0; });
-            
             trail = trail.filter(t => { t.alpha -= 0.08; return t.alpha > 0; });
-
             items = items.filter(item => {
                 item.x -= currentSpeed;
-                let dx = item.x - player.x;
-                let dy = item.y - player.y;
-                let dist = Math.sqrt(dx*dx + dy*dy);
+                let dx = item.x - player.x; let dy = item.y - player.y; let dist = Math.sqrt(dx*dx + dy*dy);
                 if(dist < 40 && !item.taken) {
                    item.taken = true;
-                   
-                   // --- NAUGHTY OR NICE LOGIC ---
-                   if (item.type === 'MYSTERY') {
-                       if (Math.random() > 0.4) {
-                           // NICE
-                           let prize = Math.random();
-                           if (prize > 0.5) {
-                               score += 5; SFX.score();
-                               floatTexts.push({text: "NICE! +5", x: player.x, y: player.y-40, life: 1.5, vy: -2, color: '#00ff00'});
-                           } else {
-                               player.shieldCount++; SFX.shieldUp();
-                               floatTexts.push({text: "NICE! SHIELD", x: player.x, y: player.y-40, life: 1.5, vy: -2, color: '#00ff00'});
-                           }
-                       } else {
-                           // NAUGHTY
-                           if (Math.random() > 0.5) {
-                               score = Math.max(0, score - 5);
-                               floatTexts.push({text: "COAL! -5", x: player.x, y: player.y-40, life: 1.5, vy: -2, color: '#ff0000'});
-                           } else {
-                               triggerOrangeMode();
-                           }
-                       }
-                   }
-                   else if (item.type === 'SHIELD') {
-                       player.shieldCount++; SFX.shieldUp();
-                       if(!PERF_MODE) floatTexts.push({text: "SHIELD +1", x: player.x, y: player.y-40, life: 1.0, vy: -2});
-                   } else if (item.type === 'CLOCK') {
-                       timeStopActive = true;
-                       timeStopTimer = 60 * 5; 
-                       canvas.classList.add('time-frozen'); 
-                       SFX.timeStop();
-                       if(!PERF_MODE) floatTexts.push({text: "FROZEN!", x: player.x, y: player.y-40, life: 1.5, vy: -2});
-                   }
-                }
-                return item.x > -50 && !item.taken;
+                   if (item.type === 'MYSTERY') { if (Math.random() > 0.4) { score += 5; SFX.score(); floatTexts.push({text: "+5 DATA", x: player.x, y: player.y-40, life: 1.5, vy: -2, color: '#00ff00'}); } else { triggerOrangeMode(); } }
+                   else if (item.type === 'SHIELD') { player.shieldCount++; SFX.shieldUp(); floatTexts.push({text: "SHIELD", x: player.x, y: player.y-40, life: 1.0, vy: -2}); }
+                   else if (item.type === 'CLOCK') { timeStopActive = true; timeStopTimer = 300; canvas.classList.add('time-frozen'); SFX.timeStop(); floatTexts.push({text: "TIME FREEZE", x: player.x, y: player.y-40, life: 1.5, vy: -2}); }
+                } return item.x > -50 && !item.taken;
             });
-
-            if(gameState === 'PLAY') {
-                obstacles.update();
-                player.update();
-                if(player.y > height || player.y < -50) die();
-            }
+            if(gameState === 'PLAY') { obstacles.update(); player.update(); /* GOD MODE: No floor death */ }
         }
 
         function loop(timestamp) {
             try {
-                if (!lastTime) lastTime = timestamp;
-                let deltaTime = timestamp - lastTime; lastTime = timestamp;
-                if (deltaTime > 1000) deltaTime = 1000;
-                accumulator += deltaTime;
-                while (accumulator >= TIME_STEP) { updatePhysics(); accumulator -= TIME_STEP; }
-
-                drawWinter();
-                
-                ctx.lineWidth = 4; for(let s of shockwaves) { ctx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`; ctx.beginPath(); ctx.arc(s.x+15, s.y+15, s.r, 0, Math.PI*2); ctx.stroke(); }
-                
-                // MINI-POPUP RENDERING
-                for(let f of floatTexts) { 
-                    ctx.save(); 
-                    ctx.font = "900 18px 'Russo One'";
-                    let txtW = ctx.measureText(f.text).width + 20;
-                    
-                    // Box Background
-                    ctx.fillStyle = f.bg || "rgba(0,0,0,0.8)";
-                    ctx.beginPath();
-                    ctx.fillRect(f.x - txtW/2, f.y - 25, txtW, 35);
-                    
-                    ctx.fillStyle = f.color || "#fff"; 
-                    ctx.textAlign = "center";
-                    ctx.fillText(f.text, f.x, f.y); 
-                    ctx.restore(); 
-                }
-                
-                for(let item of items) {
-                    ctx.save();
-                    ctx.shadowBlur = 15; 
-                    
-                    if (item.type === 'SHIELD') {
-                        ctx.shadowColor = '#00ff00';
-                        ctx.fillStyle = "#ccffcc"; 
-                        ctx.beginPath(); ctx.arc(item.x, item.y, 15, 0, Math.PI*2); ctx.fill();
-                        ctx.fillStyle = "#005500"; ctx.fillText("S", item.x, item.y+8);
-                    } else if (item.type === 'CLOCK') {
-                        ctx.shadowColor = '#00ffff'; 
-                        ctx.fillStyle = "#ccffff";
-                        ctx.beginPath(); ctx.arc(item.x, item.y, 15, 0, Math.PI*2); ctx.fill();
-                        ctx.fillStyle = "#0055aa"; ctx.fillText("❄", item.x, item.y+8); 
-                    } else if (item.type === 'MYSTERY') {
-                        ctx.shadowColor = '#ff00ff';
-                        ctx.fillStyle = "#ffdd00"; // Gold
-                        ctx.beginPath(); 
-                        ctx.fillRect(item.x-15, item.y-15, 30, 30);
-                        ctx.fillStyle = "#ff0000"; ctx.font="bold 20px monospace"; ctx.textAlign="center"; ctx.fillText("?", item.x, item.y+7);
-                    }
-                    ctx.restore();
-                }
-
-                obstacles.draw();
-                if(gameState === 'PLAY' || gameState === 'DIE_ANIM' || gameState === 'WIN_PAUSE') player.draw();
-
-                for(let p of particles) { if(p.type === 'explode') { ctx.fillStyle = p.color; ctx.globalAlpha = p.life; ctx.fillRect(p.x, p.y, p.size, p.size); } } ctx.globalAlpha = 1;
-
+                if (!lastTime) lastTime = timestamp; let deltaTime = timestamp - lastTime; lastTime = timestamp; if (deltaTime > 1000) deltaTime = 1000; accumulator += deltaTime; while (accumulator >= TIME_STEP) { updatePhysics(); accumulator -= TIME_STEP; }
+                drawVoid();
+                for(let f of floatTexts) { ctx.save(); ctx.font = "bold 16px 'Syncopate'"; ctx.fillStyle = f.color || "#fff"; ctx.shadowColor = f.color || "#fff"; ctx.shadowBlur = 10; ctx.textAlign = "center"; ctx.fillText(f.text, f.x, f.y); ctx.restore(); }
+                for(let item of items) { ctx.save(); ctx.shadowBlur = 15; if (item.type === 'SHIELD') { ctx.shadowColor = '#00ffff'; ctx.fillStyle = "#e0ffff"; ctx.beginPath(); ctx.arc(item.x, item.y, 12, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle="#00ffff"; ctx.lineWidth=2; ctx.stroke(); } else if (item.type === 'CLOCK') { ctx.shadowColor = '#ffffff'; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.rect(item.x-10, item.y-10, 20, 20); ctx.fill(); } else if (item.type === 'MYSTERY') { ctx.shadowColor = '#ff00ff'; ctx.fillStyle = "#ff00ff"; ctx.beginPath(); ctx.moveTo(item.x, item.y-15); ctx.lineTo(item.x+15, item.y+15); ctx.lineTo(item.x-15, item.y+15); ctx.fill(); } ctx.restore(); }
+                obstacles.draw(); if(gameState === 'PLAY' || gameState === 'DIE_ANIM' || gameState === 'WIN_PAUSE') player.draw();
+                for(let p of particles) { ctx.fillStyle = p.color || "#fff"; ctx.fillRect(p.x, p.y, p.size, p.size); }
                 requestAnimationFrame(loop);
-            } catch(e) {
-                logError(e.toString());
-            }
+            } catch(e) { logError(e.toString()); }
         }
 
-        function initParticles() {
-            if(PERF_MODE) return;
-            particles = []; for(let i=0; i<40; i++) particles.push({type: 'dust', x: Math.random()*width, y: Math.random()*height, speed: Math.random()*2 + 1, size: Math.random()*3});
-        }
+        function initParticles() { if(PERF_MODE) return; particles = []; for(let i=0; i<20; i++) particles.push({x: Math.random()*width, y: Math.random()*height, vx: (Math.random()-0.5), vy: (Math.random()-0.5), life: 1, size: 2, color: "#00ffff"}); }
 
         function handleInput(e) {
             if(e.type === 'keydown' && e.code === 'Space') e.preventDefault();
-            if(e.target.id === 'perf-btn') return;
-            if(e.target.id === 'cheat-btn') return; // Don't jump if clicking cheat
-            if(e.target.closest('#leaderboard')) return;
-            if(e.target.closest('.win-input-field')) return; 
-
+            if(e.target.id === 'perf-btn' || e.target.id === 'cheat-btn' || e.target.id === 'god-btn' || e.target.closest('#leaderboard') || e.target.closest('.win-input-field')) return;
             if(gameState === 'WIN_PAUSE') return;
             if(gameState === 'START') startGame();
-            else if(gameState === 'PLAY') {
-                player.velocity = -JUMP; SFX.jump();
-                if(!PERF_MODE) {
-                    for(let i=0; i<5; i++) particles.push({type: 'explode', x: player.x, y: player.y+player.size, vx: (Math.random()-0.5)*5, vy: Math.random()*5, life: 0.5, color: '#ff0', size: 3});
-                }
-            }
+            else if(gameState === 'PLAY') { player.velocity = -JUMP; SFX.jump(); if(!PERF_MODE) for(let i=0; i<5; i++) particles.push({x: player.x, y: player.y, vx: (Math.random()-0.5)*5, vy: Math.random()*5, life: 0.5, size: 2, color: '#fff'}); }
         }
 
         window.addEventListener('keydown', (e) => { if(e.code === 'Space' || e.code === 'ArrowUp') handleInput(e); });
         window.addEventListener('mousedown', handleInput);
         window.addEventListener('touchstart', handleInput, {passive: false});
 
-        // --------------------------------------------------------
-        // FIREBASE & LEADERBOARD LOGIC
-        // --------------------------------------------------------
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCTnLXpYRMw8pxaBS1cIqeeGqtD7A1Mtow",
-            authDomain: "powa-2f1bc.firebaseapp.com",
-            projectId: "powa-2f1bc",
-            storageBucket: "powa-2f1bc.firebasestorage.app",
-            messagingSenderId: "522344119710",
-            appId: "1:522344119710:web:3bd572ef6580abd4c76a8f"
-        };
-
+        const firebaseConfig = { apiKey: "AIzaSyCTnLXpYRMw8pxaBS1cIqeeGqtD7A1Mtow", authDomain: "powa-2f1bc.firebaseapp.com", projectId: "powa-2f1bc", storageBucket: "powa-2f1bc.firebasestorage.app", messagingSenderId: "522344119710", appId: "1:522344119710:web:3bd572ef6580abd4c76a8f" };
         if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         let currentLeaderboardListener = null;
-
         window.switchTab = function(mode) {
-            const buttons = document.querySelectorAll('.tab-btn');
-            buttons.forEach(b => b.classList.remove('active'));
-            if(mode === 'daily') buttons[0].classList.add('active');
-            else buttons[1].classList.add('active');
-
+            const buttons = document.querySelectorAll('.tab-btn'); buttons.forEach(b => b.classList.remove('active'));
+            if(mode === 'daily') buttons[0].classList.add('active'); else buttons[1].classList.add('active');
             fetchLeaderboard(mode);
         };
 
         function fetchLeaderboard(mode) {
-            const listDiv = document.getElementById('leaderboard-list');
-            listDiv.innerHTML = "<div style='text-align:center; color:#0f0; padding-top:20px; animation:blink 1s infinite;'>LOADING...</div>";
-
+            const listDiv = document.getElementById('leaderboard-list'); listDiv.innerHTML = "<div style='text-align:center; color:#00ffff; padding-top:20px; font-size:0.8rem;'>FETCHING DATA...</div>";
             if(currentLeaderboardListener) currentLeaderboardListener(); 
-
-            let collectionName;
-            if (mode === 'daily') {
-                collectionName = `leaderboard_${KEY_ID}`;
-            } else {
-                collectionName = `leaderboard_${getWeekId()}`;
-            }
-
-            currentLeaderboardListener = db.collection(collectionName)
-                .orderBy("score", "desc")
-                .limit(10)
-                .onSnapshot((querySnapshot) => {
-                    let html = ""; let rank = 1;
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        const safeName = data.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                        
-                        let rankColor="#aaa"; let bgStyle="transparent"; let borderStyle="1px dashed #333";
-                        if(rank===1) { rankColor="#ffff00"; borderStyle="1px solid #ffff00"; bgStyle="rgba(255,255,0,0.1)"; }
-                        else if(rank===2) { rankColor="#00ffff"; borderStyle="1px dotted #00ffff"; }
-                        else if(rank===3) { rankColor="#bd00ff"; borderStyle="1px dotted #bd00ff"; }
-
-                        html += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:${borderStyle}; background:${bgStyle}; padding: 5px 4px; margin-bottom: 2px;">
-                            <span style="color:${rankColor}; font-family:'Russo One'; font-size:0.9rem;">
-                                <span style="display:inline-block; width:25px; text-align:right; margin-right:10px;">#${rank}</span>${safeName}
-                            </span>
-                            <span style="color:${rankColor}; font-family:'Russo One'; font-size:1rem;">${data.score}</span>
-                        </div>`;
-                        rank++;
-                    });
-                    if(html==="") html="<div style='text-align:center; color:#555; margin-top:30px; font-family:monospace;'>[ NO SCORES YET ]</div>";
-                    listDiv.innerHTML = html;
-                });
-        }
-
-        function submitToCollection(collectionName, name, score) {
-            return db.collection(collectionName).where("name", "==", name).get()
-            .then((snapshot) => {
-                if(!snapshot.empty) {
-                    let docId = snapshot.docs[0].id;
-                    let oldScore = snapshot.docs[0].data().score;
-                    if(score > oldScore) return db.collection(collectionName).doc(docId).update({score: score, date: new Date()});
-                    else return Promise.resolve();
-                } else {
-                    return db.collection(collectionName).add({name: name, score: score, date: new Date()});
-                }
+            let collectionName = mode === 'daily' ? `leaderboard_${KEY_ID}` : `leaderboard_${getWeekId()}`;
+            currentLeaderboardListener = db.collection(collectionName).orderBy("score", "desc").limit(10).onSnapshot((querySnapshot) => {
+                let html = ""; let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data(); const safeName = data.name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    let color = rank === 1 ? "#ffff00" : (rank === 2 ? "#00ffff" : "#ff00ff");
+                    html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding: 5px 0;"><span style="color:${color}; font-size:0.8rem;"><span style="width:20px; display:inline-block;">${rank}</span> ${safeName}</span><span style="color:${color};">${data.score}</span></div>`;
+                    rank++;
+                }); listDiv.innerHTML = html || "<div style='text-align:center; color:#555;'>VOID EMPTY</div>";
             });
         }
 
-        window.submitScore = function(isAuto = false) {
-            let storedName = localStorage.getItem('powa-username');
-            let rawName = storedName || "";
-            const nameInput = document.getElementById('username-input'); 
-            const submitBtn = document.getElementById('submit-score-btn');
+        function submitToCollection(collectionName, name, score) { return db.collection(collectionName).where("name", "==", name).get().then((snapshot) => { if(!snapshot.empty) { let docId = snapshot.docs[0].id; if(score > snapshot.docs[0].data().score) return db.collection(collectionName).doc(docId).update({score: score, date: new Date()}); return Promise.resolve(); } return db.collection(collectionName).add({name: name, score: score, date: new Date()}); }); }
+        window.submitScore = function(isAuto = false) { let rawName = document.getElementById('username-input').value || localStorage.getItem('powa-username') || "GHOST"; localStorage.setItem('powa-username', rawName); const btn = document.getElementById('submit-score-btn'); if(btn) btn.innerText = "UPLOADING..."; const s = parseInt(score, 10); Promise.all([ submitToCollection(`leaderboard_${KEY_ID}`, rawName, s), submitToCollection(`leaderboard_${getWeekId()}`, rawName, s) ]).then(() => { if(btn) btn.innerText = "UPLOAD COMPLETE"; }).catch(() => { if(btn) btn.innerText = "UPLOAD FAILED"; }); };
 
-            if (!isAuto && nameInput) rawName = nameInput.value;
-            const name = rawName.toUpperCase().trim().substring(0, 15) || "ELF";
-            localStorage.setItem('powa-username', name);
-
-            if(score===0 && !isAuto) { alert("Play first!"); return; }
-            
-            let scoreToSend = parseInt(score, 10);
-            
-            if(submitBtn) {
-                submitBtn.innerText = isAuto ? "SENDING TO SANTA..." : "CHECKING LIST...";
-                submitBtn.disabled = true; 
-                if(nameInput) nameInput.disabled = true;
-            }
-
-            const dailyCollection = `leaderboard_${KEY_ID}`;
-            const weeklyCollection = `leaderboard_${getWeekId()}`;
-            
-            Promise.all([
-                submitToCollection(weeklyCollection, name, scoreToSend),   
-                submitToCollection(dailyCollection, name, scoreToSend)
-            ]).then(() => {
-                if(submitBtn) {
-                    submitBtn.innerText = "SENT!";
-                    submitBtn.style.background = "#333";
-                }
-            }).catch((err) => {
-                console.error(err);
-                if(submitBtn) {
-                    submitBtn.innerText = "ERROR";
-                    submitBtn.disabled = false;
-                }
-            });
-        };
-
-        // --- NEW: Check cheat on load ---
         checkGlobalCheatStatus();
-
-        initWinter(); initParticles(); resetLevel(); requestAnimationFrame(loop);
+        initVoid(); initParticles(); resetLevel(); requestAnimationFrame(loop);
         switchTab('daily');
-
-        if (KEY_WARNING_MODE === "ON") {
-            const warnBox = document.getElementById('key-warning');
-            if(warnBox) warnBox.style.display = 'block';
-        }
     </script>
 </body>
 </html>
-
-
